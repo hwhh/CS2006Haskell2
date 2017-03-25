@@ -1,0 +1,9 @@
+name:              CS2006Haskell2
+version:           1.0
+Build-Type:        Simple
+cabal-version:     >= 1.2
+
+executable CS2006Haskell2
+  main-is:         Main.hs
+  hs-source-dirs:  src
+  build-depends:   base
