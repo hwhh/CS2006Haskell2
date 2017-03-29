@@ -2,4 +2,5 @@
 .gitignore
 .idea/
 CS2006Haskell2.iml
-Main/
+dist/
+out/
