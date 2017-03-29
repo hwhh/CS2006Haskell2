@@ -1,8 +1,5 @@
 # Created by .ignore support plugin (hsz.mobi)
-syntax: glob
-
-*.iml
-*.xml
-/.idea
-/dist
-/out
+.gitignore
+.idea/
+CS2006Haskell2.iml
+Main/
