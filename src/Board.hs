@@ -1,13 +1,18 @@
 module Board where
 
+import Data.List
+import Debug.Trace
+
+
+
 data Col = Black | White
-  deriving Show
+  deriving (Show, Eq)
 
 other :: Col -> Col
 other Black = White
 other White = Black
 
-type Position = (Int, Int)
+type Position = (Float, Float)
 
 -- A Board is a record containing the board size (a board is a square grid,
 -- n * n), the number of pieces in a row required to win, and a list 
@@ -24,7 +29,7 @@ data Board = Board { size :: Int,
   deriving Show
 
 -- Default board is 6x6, target is 3 in a row, no initial pieces
-initBoard = Board 6 3 []
+initBoard = Board 6 3 [((0, 0), White)]
 
 -- Overall state is the board and whose turn it is, plus any further
 -- information about the world (this may later include, for example, player
@@ -36,12 +41,26 @@ initBoard = Board 6 3 []
 data World = World { board :: Board,
                      turn :: Col }
 
+
 initWorld = World initBoard Black
 
 -- Play a move on the board; return 'Nothing' if the move is invalid
 -- (e.g. outside the range of the board, or there is a piece already there)
+
+output :: IO()
+output = putStrLn("here")
+
+
+
 makeMove :: Board -> Col -> Position -> Maybe Board
-makeMove = undefined
+makeMove b c p
+            | fst p  < s && snd p < s =  case elem p (map fst (pieces b)) of
+                                                True -> trace ("Here ") Nothing
+                                                False -> trace ("Here 1 ") Just b {pieces =  ((p, c):pieces b)}
+            | otherwise = Nothing
+
+            where s = fromIntegral $ size b
+
 
 -- Check whether the board is in a winning state for either player.
 -- Returns 'Nothing' if neither player has won yet
