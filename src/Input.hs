@@ -20,7 +20,9 @@ handleInput :: Event -> World -> World
 handleInput (EventMotion (x, y)) b  = trace ("Mouse moved to: " ++ show (x,y)) b
 
 handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w = case makeMove b col (f, s) of
-                                                                      Just new_board ->  trace ("1.  Left button pressed at: " ++ (show $ (f, s))) w {board = new_board, turn = other col}
+                                                                      Just new_board -> case won new_board of
+                                                                                             True -> trace ("Game won " ++ (show $ (f, s))) w {board = new_board, turn = other col}
+                                                                                             False ->trace ("Game not won " ++ (show $ (f, s))) w {board = new_board, turn = other col}
                                                                       Nothing -> trace ("2. Left button pressed at: " ++ (show $ (f, s))) w
                                                                 where b = board w
                                                                       col = turn w
@@ -37,7 +39,6 @@ handleInput (EventKey (Char k) Up _ _) b
 handleInput e b = b
 
 
---320, 240 == 0, 0
 screenToCell :: Board -> Float -> Float -> (Float, Float)
 screenToCell b x y = (fromIntegral $ ceiling $ x / (width/ s) + offset ,  fromIntegral $ ceiling $ (-y)/ (height/ s) + offset)
             where s = fromIntegral $ size b
