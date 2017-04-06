@@ -25,8 +25,8 @@ drawGrid b = pictures[uncurry translate (cellToScreen b x y) $ color black $ rec
 
 drawPNG ::  Col -> Picture
 drawPNG col
-            | col == Black = png "Pieces/b1.png"
-            | col == White = png "Pieces/w1.png"
+            | col == Black = png "Pieces/b1o.png"
+            | col == White = png "Pieces/w1o.png"
 
 drawPices::  Board -> Picture
 drawPices b = pictures(foldr (\((f, s), c) acc ->

@@ -13,6 +13,8 @@ other Black = White
 other White = Black
 
 type Position = (Float, Float)
+type Direction = (Float, Float)
+
 
 -- A Board is a record containing the board size (a board is a square grid,
 -- n * n), the number of pieces in a row required to win, and a list 
@@ -47,26 +49,49 @@ initWorld = World initBoard Black
 -- Play a move on the board; return 'Nothing' if the move is invalid
 -- (e.g. outside the range of the board, or there is a piece already there)
 
-output :: IO()
-output = putStrLn("here")
-
-
-
 makeMove :: Board -> Col -> Position -> Maybe Board
 makeMove b c p
             | fst p  < s && snd p < s =  case elem p (map fst (pieces b)) of
-                                                True -> trace ("Here ") Nothing
-                                                False -> trace ("Here 1 ") Just b {pieces =  ((p, c):pieces b)}
+                                                True -> Nothing
+                                                False -> Just b {pieces =  ((p, c):pieces b)}
             | otherwise = Nothing
 
             where s = fromIntegral $ size b
+
 
 
 -- Check whether the board is in a winning state for either player.
 -- Returns 'Nothing' if neither player has won yet
 -- Returns 'Just c' if the player 'c' has won
 checkWon :: Board -> Maybe Col
-checkWon = undefined
+checkWon b = undefined -- any (\row -> all())
+--any (\row -> all (\col -> b!(row,col) == t) [1..3]) [1..3]
+
+
+check :: Board -> Col -> Bool
+check b c = undefined
+
+
+func3 :: Board -> Position -> Direction -> Maybe [Position]
+func3 b p d | end_x > s  || end_y > s = Nothing
+            | d == (0,-1) = Just (zip (repeat (fst p)) [snd p, snd p-1 .. end_y])-- N
+            | d == (1,-1) = Just (zip [fst p .. end_x] [snd p, snd p-1 .. end_y])-- NE
+            | d == (1,0)  = Just (zip [fst p .. end_x] (repeat (snd p)))-- E
+            |  == (1,0)  = Just (zip [fst p .. end_x] (repeat (snd p)))-- E
+
+
+            where end_x = fst p + (fromIntegral (target b) * fst d)
+                  end_y = snd p + (fromIntegral (target b) * snd d)
+                  s = (fromIntegral (size b))
+
+--generateLines :: Board -> Position -> Direction -> Maybe [(Position)]
+--generateLines b d p | end_x > s  || end_y > s = Nothing
+--                    | fst d == snd d = Just(zip [fst p .. end_x] [fst p .. end_y])
+--                    | otherwise = Just([(x,y) | x <- [fst p .. end_x] , y <- [snd p .. end_y]])
+--                    where end_x = fst p + (fromIntegral (target b) * fst d)
+--                          end_y = snd p + (fromIntegral (target b) * snd d)
+--                          s = (fromIntegral (size b))
+
 
 {- Hint: One way to implement 'checkWon' would be to write functions 
 which specifically check for lines in all 8 possible directions
@@ -76,8 +101,7 @@ In these functions:
 To check for a line of n in a row in a direction D:
 For every position ((x, y), col) in the 'pieces' list:
 - if n == 1, the colour 'col' has won
-- if n > 1, move one step in direction D, and check for a line of
-  n-1 in a row.
+- if n > 1, move one step in direction D, and check for a line of n-1 in a row.
 -}
 
 -- An evaluation function for a minimax search. Given a board and a colour

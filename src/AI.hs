@@ -21,6 +21,7 @@ buildTree :: (Board -> Col -> [Position]) -- ^ Move generator
              -> Board -- ^ board state
              -> Col -- ^ player to play next
              -> GameTree
+
 buildTree gen b c = let moves = gen b c in -- generated moves
                         GameTree b c (mkNextStates moves)
   where
