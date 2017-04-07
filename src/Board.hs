@@ -7,6 +7,7 @@ import Debug.Trace
 dirs = [(0.0, -1.0), (1.0, -1.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (-1.0, 1.0), (-1.0, 0), (-1.0, -1.0)]
 
 
+
 data Col = Black | White
   deriving (Show, Eq)
 
@@ -29,12 +30,12 @@ type Direction = (Float, Float)
 data Board = Board { size :: Int,
                      target :: Int,
                      pieces :: [(Position, Col)],
-                     won :: Bool
+                     won :: (Bool, Maybe Col)
                    }
   deriving Show
 
 -- Default board is 6x6, target is 3 in a row, no initial pieces
-initBoard = Board 6 3 [] False
+initBoard = Board 6 3 [] (False, Nothing)
 
 -- Overall state is the board and whose turn it is, plus any further
 -- information about the world (this may later include, for example, player
@@ -44,8 +45,10 @@ initBoard = Board 6 3 [] False
 -- will be useful (information for the AI, for example, such as where the
 -- most recent moves were).
 data World = World { board :: Board,
-                     turn :: Col }
+                     turn :: Col}
 
+data AI = AI {col :: Col,
+              previous_moves :: [(Position, Col)]}
 
 initWorld = World initBoard Black
 
@@ -55,10 +58,12 @@ initWorld = World initBoard Black
 
 makeMove :: Board -> Col -> Position -> Maybe Board
 makeMove b c p
-            | fst p  < s && snd p < s =  case elem p (map fst (pieces b)) of
+            | fst (won b) = Nothing
+            | fst p  < s && snd p < s  && fst p  > -1 && snd p > -1 =
+                                            case elem p (map fst (pieces b)) of
                                                 True -> Nothing
                                                 False -> case checkWon (b {pieces =  ((p, c):pieces b)}) c of
-                                                                True -> Just (b {pieces =  ((p, c):pieces b), won=True})
+                                                                True -> Just (b {pieces =  ((p, c):pieces b), won=(True, Just c)})
                                                                 False -> Just (b {pieces =  ((p, c):pieces b)})
             | otherwise = Nothing
 
@@ -88,14 +93,26 @@ checkWon b c = checkPositions b c combinations
 
 checkPositions :: Board -> Col -> [(Position, Direction)] -> Bool
 checkPositions b c [] = False
-checkPositions b c (x:xs) | checkPosition b (fst x) (snd x) c (target b) == True = True
-                          | otherwise = checkPositions b c xs
-
+checkPositions b c (x:xs) | checkPosition b p d c (target b) == True = True
+                          | otherwise = checkPositions b c  (filter (`notElem` createLine b p d) xs)
+                        where p = fst x
+                              d = snd x
 
 checkPosition :: Board -> Position -> Direction -> Col -> Int -> Bool
 checkPosition b p d c 1 = True
 checkPosition b p d c n | (fst p + fst d, snd p +snd d) `notElem` map (fst) (filter ((==c).snd) (pieces b)) = False
-                | otherwise = checkPosition b (fst p + fst d, snd p +snd d) d c (n-1)
+                        | otherwise = checkPosition b (fst p + fst d, snd p +snd d) d c (n-1)
+
+
+createLine :: Board -> Position -> Direction -> [(Position, Direction)]
+createLine b p d  | d == (0.0, -1.0) || d == (0.0, 1.0)   = [((fromIntegral x, snd p),(0.0, -1.0)) | x <- [0..(size b)]] ++
+                                                            [((fromIntegral x, snd p),(0.0, 1.0)) | x <- [0..(size b)]]
+                  | d == (-1.0, 0.0) || d == (1.0, 0.0)   = [((fst p, fromIntegral y),(-1.0, 0.0)) | y <- [0..(size b)]] ++
+                                                            [((fst p, fromIntegral y),(1.0, 0.0)) | y <- [0..(size b)]]
+                  | d == (1.0, -1.0) || d == (-1.0, 1.0)  = map (\(x,y) -> ((x,y),(1.0, -1.0))) (zip [fst p..fromIntegral (size b)] [snd p, snd p -1..0.0]) ++
+                                                            map (\(x,y) -> ((x,y),(-1.0, 1.0))) (zip [fst p..fromIntegral (size b)] [snd p, snd p -1..0.0])
+                  | d == (1.0, 1.0)  || d == (-1.0, -1.0) = map (\(x,y) -> ((x,y),(1.0, 1.0)))  (zip [fst p, fst p -1 ..0.0] [snd p, snd p -1..0.0]) ++
+                                                            map (\(x,y) -> ((x,y),(-1.0, -1.0))) (zip [fst p, fst p -1 ..0.0] [snd p, snd p -1..0.0])
 
 
 -- An evaluation function for a minimax search. Given a board and a colour
@@ -106,7 +123,17 @@ evaluate = undefined
 
 
 
-
+--removePos :: [(Position, Direction)]-> Position -> Direction-> [(Position, Direction)]
+--removePos xs p d = foll (\((x,y), (d1, d2)) acc -> if
+--                        | (((d1,d2) == (0, -1) || (d1,d2) == (0, 1)) && y != snd p) -> ((x,y), (d1, d2)):acc --N S
+--                        | ((d1,d2) == (-1, 0) || (d1,d2) == (1, 0) && x != fst p)   -> ((x,y), (d1, d2)):acc--W E
+--                        | ((d1,d2) == (1, -1) || (d1,d2) == (-1, 1) && (x) ) -- NE SW
+--                        | ((d1,d2) == (1, 1)  || (d1,d2) == (-1, -1))
+--
+--                    ) [] xs-- SE NW
+--
+--
+--
 
 
 

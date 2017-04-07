@@ -1,12 +1,12 @@
 module Draw(drawWorld) where
 
+import Data.Maybe
 import Graphics.Gloss
 import Graphics.Gloss.Game
 import Board
 
 
 fieldSize@(width, height) = (660, 480) :: (Float, Float)
-
 
 -- Given a world state, return a Picture which will render the world state.
 -- Currently just draws a single blue circle as a placeholder.
@@ -16,8 +16,12 @@ fieldSize@(width, height) = (660, 480) :: (Float, Float)
 
 
 drawWorld :: World -> Picture
-drawWorld w = pictures(drawGrid(b):drawPices(b):[])
+drawWorld w | fst game_won =  translate (-330.0) 0.0 (text ((show $ fromJust $ snd game_won)++" Wins" ))
+            | otherwise = pictures(drawGrid(b):drawPices(b):[])
                    where b = board w
+                         game_won = won b
+
+
 
 drawGrid :: Board -> Picture
 drawGrid b = pictures[uncurry translate (cellToScreen b x y) $ color black $ rectangleWire (width/s)  (height/s) | x <- [0 .. s-1], y <- [0 ..s-1]]

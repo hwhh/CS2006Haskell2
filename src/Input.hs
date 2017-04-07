@@ -19,14 +19,14 @@ handleInput :: Event -> World -> World
 
 handleInput (EventMotion (x, y)) b  = trace ("Mouse moved to: " ++ show (x,y)) b
 
-handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w = case makeMove b col (f, s) of
-                                                                      Just new_board -> case won new_board of
+handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w | turn w == White = case makeMove b col (f, s) of
+                                                                                      Just new_board -> case fst $ won new_board of
                                                                                              True -> trace ("Game won " ++ (show $ (f, s))) w {board = new_board, turn = other col}
                                                                                              False ->trace ("Game not won " ++ (show $ (f, s))) w {board = new_board, turn = other col}
-                                                                      Nothing -> trace ("2. Left button pressed at: " ++ (show $ (f, s))) w
-                                                                where b = board w
-                                                                      col = turn w
-                                                                      (f, s) = screenToCell b x y
+                                                                                      Nothing -> trace ("2. Left button pressed at: " ++ (show $ (f, s))) w
+                                                                                where b = board w
+                                                                                      col = turn w
+                                                                                      (f, s) = screenToCell b x y
 
 
 --other $ turn w w {pieces = ((, other $ turn w):pieces b)}, other $ turn w}-- --  b
@@ -44,9 +44,6 @@ screenToCell b x y = (fromIntegral $ ceiling $ x / (width/ s) + offset ,  fromIn
             where s = fromIntegral $ size b
                   offset = s / 3
 
-
-createWorld :: World -> Board -> Col -> World
-createWorld w b c = w {board = b, turn = c}
 
 {- Hint: when the 'World' is in a state where it is the human player's
  turn to move, a mouse press event should calculate which board position

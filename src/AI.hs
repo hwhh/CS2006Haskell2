@@ -47,7 +47,22 @@ getBestMove = undefined
 updateWorld :: Float -- ^ time since last update (you can ignore this)
             -> World -- ^ current world state
             -> World
-updateWorld t w = w
+updateWorld t w | turn w == White = w
+                | turn w == Black = let move = generateMoves (board w) !! 0
+                                        col = turn w
+                                    in
+                                        case makeMove (board w) Black move of
+                                               Just new_board -> case fst $ won new_board of
+                                                     True -> w {board = new_board, turn = other col}
+                                                     False -> w {board = new_board, turn = other col}
+                                               Nothing -> w
+
+
+
+
+generateMoves :: Board -> [(Position)]
+generateMoves b = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
+
 
 {- Hint: 'updateWorld' is where the AI gets called. If the world state
  indicates that it is a computer player's turn, updateWorld should use
