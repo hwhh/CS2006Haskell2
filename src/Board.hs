@@ -94,7 +94,7 @@ checkWon b c = checkPositions b c combinations
 checkPositions :: Board -> Col -> [(Position, Direction)] -> Bool
 checkPositions b c [] = False
 checkPositions b c (x:xs) | checkPosition b p d c (target b) == True = True
-                          | otherwise = checkPositions b c  (filter (`notElem` createLine b p d) xs)
+                          | otherwise = checkPositions b c (filter (`notElem` (map (\(x,y) -> ((x,y),d)) $ createLine b p d)) xs)
                         where p = fst x
                               d = snd x
 
@@ -104,15 +104,21 @@ checkPosition b p d c n | (fst p + fst d, snd p +snd d) `notElem` map (fst) (fil
                         | otherwise = checkPosition b (fst p + fst d, snd p +snd d) d c (n-1)
 
 
-createLine :: Board -> Position -> Direction -> [(Position, Direction)]
-createLine b p d  | d == (0.0, -1.0) || d == (0.0, 1.0)   = [((fromIntegral x, snd p),(0.0, -1.0)) | x <- [0..(size b)]] ++
-                                                            [((fromIntegral x, snd p),(0.0, 1.0)) | x <- [0..(size b)]]
-                  | d == (-1.0, 0.0) || d == (1.0, 0.0)   = [((fst p, fromIntegral y),(-1.0, 0.0)) | y <- [0..(size b)]] ++
-                                                            [((fst p, fromIntegral y),(1.0, 0.0)) | y <- [0..(size b)]]
-                  | d == (1.0, -1.0) || d == (-1.0, 1.0)  = map (\(x,y) -> ((x,y),(1.0, -1.0))) (zip [fst p..fromIntegral (size b)] [snd p, snd p -1..0.0]) ++
-                                                            map (\(x,y) -> ((x,y),(-1.0, 1.0))) (zip [fst p..fromIntegral (size b)] [snd p, snd p -1..0.0])
-                  | d == (1.0, 1.0)  || d == (-1.0, -1.0) = map (\(x,y) -> ((x,y),(1.0, 1.0)))  (zip [fst p, fst p -1 ..0.0] [snd p, snd p -1..0.0]) ++
-                                                            map (\(x,y) -> ((x,y),(-1.0, -1.0))) (zip [fst p, fst p -1 ..0.0] [snd p, snd p -1..0.0])
+
+getX :: Position -> Float -> Position
+getX (x, 0) d = (x, 0)
+getX p d = getX (fst p + d, snd p -1) d
+
+getY :: Position -> Float -> Position
+getY (0,y) d = (0, y)
+getY p d = getX (fst p -1, snd p + d) d
+
+createLine ::Board -> Position -> Direction -> [Position]
+createLine b p d | d == (1.0, -1.0) || d == (-1.0, 1.0)  = let x = fst $ getX p 1    in filter (\(x,y) -> x < s+1) $ zip [x, x-1 ..0] [0..s]
+                 | d == (1.0, 1.0)  || d == (-1.0, -1.0) = let x = fst $ getX p (-1) in filter (\(x,y) -> x > -1) $ zip [x, x+1 ..5] [0..s]
+                 | d == (0.0, -1.0) || d == (0.0, 1.0)   = let x = fst $ getX p 1    in zip [0..s] $ repeat $ snd p
+                 | d == (-1.0, 0.0) || d == (1.0, 0.0)   = let x = fst $ getX p 1    in zip (repeat $ snd p) [0..s]
+               where s = fromIntegral $ size b
 
 
 -- An evaluation function for a minimax search. Given a board and a colour
