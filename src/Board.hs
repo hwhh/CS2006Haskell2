@@ -2,7 +2,7 @@ module Board where
 
 import Data.List
 import Debug.Trace
-
+import Data.Maybe
 
 dirs = [(0.0, -1.0), (1.0, -1.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (-1.0, 1.0), (-1.0, 0), (-1.0, -1.0)]
 
@@ -46,6 +46,7 @@ initBoard = Board 6 3 [] (False, Nothing)
 -- most recent moves were).
 data World = World { board :: Board,
                      turn :: Col}
+ deriving Show
 
 data AI = AI {col :: Col,
               previous_moves :: [(Position, Col)]}
@@ -104,7 +105,6 @@ checkPosition b p d c n | (fst p + fst d, snd p +snd d) `notElem` map (fst) (fil
                         | otherwise = checkPosition b (fst p + fst d, snd p +snd d) d c (n-1)
 
 
-
 getX :: Position -> Float -> Position
 getX (x, 0) d = (x, 0)
 getX p d = getX (fst p + d, snd p -1) d
@@ -124,23 +124,12 @@ createLine b p d | d == (1.0, -1.0) || d == (-1.0, 1.0)  = let x = fst $ getX p 
 -- An evaluation function for a minimax search. Given a board and a colour
 -- return an integer indicating how good the board is for that colour.
 
+
+
 evaluate :: Board -> Col -> Int
-evaluate = undefined
-
-
-
---removePos :: [(Position, Direction)]-> Position -> Direction-> [(Position, Direction)]
---removePos xs p d = foll (\((x,y), (d1, d2)) acc -> if
---                        | (((d1,d2) == (0, -1) || (d1,d2) == (0, 1)) && y != snd p) -> ((x,y), (d1, d2)):acc --N S
---                        | ((d1,d2) == (-1, 0) || (d1,d2) == (1, 0) && x != fst p)   -> ((x,y), (d1, d2)):acc--W E
---                        | ((d1,d2) == (1, -1) || (d1,d2) == (-1, 1) && (x) ) -- NE SW
---                        | ((d1,d2) == (1, 1)  || (d1,d2) == (-1, -1))
---
---                    ) [] xs-- SE NW
---
---
---
-
+evaluate b c = case fst $ won b of
+                True -> if  fromJust (snd (won b)) == Black then 1000 else -1000
+                False -> 0
 
 
 
