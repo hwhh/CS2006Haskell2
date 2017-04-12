@@ -48,16 +48,11 @@ buildTree gen b c = let moves = gen b c in -- generated moves
 -- is at the top of the game tree.
 
 minimax :: Int -> GameTree -> Int
-minimax 0 (GameTree b col _)    = evaluate b col
+minimax 0 (GameTree b col _)    = let x = evaluate b col in trace (show x) x
 minimax d (GameTree b col [])   = evaluate b col
-minimax d (GameTree b White xs) = minimum $ map (minimax (d - 1)) (map snd (xs))
 minimax d (GameTree b Black xs) = maximum $ map (minimax (d - 1)) (map snd (xs))
+minimax d (GameTree b White xs) = minimum $ map (minimax (d - 1)) (map snd (xs))
 
---minimaxa :: Int -> Int -> Int -> GameTree -> Int
---minimaxa 0 a b (GameTree board  col _)    = evaluate board col
---minimaxa d a b (GameTree board col [])    = evaluate board col
---minimaxa d a b (GameTree board White xs) = minimum $ map (minimax (d - 1)) -- function ommits tree branches (map snd (xs))
---minimaxa d a b (GameTree board Black xs) = maximum $ map (minimax (d - 1)) (map snd (xs))
 
 
 minimax_ab :: Int -> Int -> Int -> GameTree -> Int
@@ -72,8 +67,8 @@ minimax_ab d a b (GameTree board col xs) = cmx a (map snd (xs))
 getBestMove :: Int -- ^ Maximum search depth
                -> GameTree -- ^ Initial game tree
                -> Position
-getBestMove n gt = --snd $ maximum $ let x = zip (map (minimax (n-1).snd) (next_moves gt)) (map fst (next_moves gt)) in trace(show x)  x
-                   snd $ maximum $ let x = zip (map (minimax_ab n alpha beta.snd) (next_moves gt)) (map fst (next_moves gt)) in trace(show x)  x
+getBestMove n gt = snd $ maximum $ let x = zip (map (minimax (n-1).snd) (next_moves gt)) (map fst (next_moves gt)) in trace(show x)  x
+                   --snd $ maximum $ let x = zip (map (minimax_ab (n-1) alpha beta.snd) (next_moves gt)) (map fst (next_moves gt)) in trace(show x)  x
                             where alpha = minBound :: Int
                                   beta  = maxBound :: Int
 
@@ -83,20 +78,20 @@ getBestMove n gt = --snd $ maximum $ let x = zip (map (minimax (n-1).snd) (next_
 updateWorld :: Float -- ^ time since last update (you can ignore this)
             -> World -- ^ current world state
             -> World
-updateWorld t w | turn w == White = w
+updateWorld t w | turn w == White = w{last_move=  Just lm}
                 | turn w == Black = let move = getBestMove 3 $ buildTree generateMoves b col
                                         in case makeMove (board w) Black move of
                                                Just new_board -> case fst $ won new_board of
-                                                     True -> w {board = new_board, turn = other col}
-                                                     False -> w {board = new_board, turn = other col}
+                                                     True -> w {board = new_board, turn = other col, last_move= Just lm}
+                                                     False -> w {board = new_board, turn = other col, last_move= Just lm}
                                                Nothing -> w
                  where b = board w
                        col = turn w
+                       lm = pieces b !! 0
 
 
 
-generateMoves :: Board -> Col -> [(Position)]
-generateMoves b c = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
+
 
 
 
@@ -110,9 +105,144 @@ generateMoves b c = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [
  If both players are human players, the simple version above will suffice,
  since it does nothing.
 
- In a complete implementation, 'updateWorld' should also check if either 
+ In a complete implementation, 'updateWorld' should also check if either
  player has won and display a message if so.
 -}
+
+generateMoves :: Board -> Col -> [(Position)]
+generateMoves b c = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
+-- | length (pieces b) == 0 = [(2.0,2.0)]
+--                  | otherwise = concat $ getAdjacentMoves all_poss $ map fst $ filter ((==c).snd) (pieces b)
+--                   where all_poss = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
+
+
+getAdjacentMoves ::[Position] -> [Position] -> [[Position]]
+getAdjacentMoves all p = foldr (\(x,y) acc ->
+                                    (foldr(\(d1, d2) acc1 ->
+                                        let new_pos_1 = (x+d1,y+d2)
+                                            new_pos_2 = (x+(d1+d1), y+(d2+d2)) in
+                                              if new_pos_1 `elem` all ||  new_pos_2 `elem` all then new_pos_1:new_pos_2:acc1 else acc1
+                                    )[] dirs
+                           ):acc) [] p
+
+
+
+
+--getNextPos:: Int -> Float -> Float
+--getNextPos count dir | dir == 0 = 0
+--                     | dir >  0 = dir - (fromIntegral $ count)
+--                     | dir <  0 = dir + (fromIntegral $ count)
+--
+--checkWinPossible :: Int-> [Position] -> (Position, Direction) -> Bool
+--checkWinPossible 2 _ _ = True
+--checkWinPossible count all_p (p,d) | y `notElem` all_p = False
+--                                   | otherwise = checkWinPossible (count+1) all_p (p,d)
+--                                   where x = (fst p + (getNextPos count (fst d)), snd p + (getNextPos count (snd d)))
+--                                         y = trace (show x) x
+
+ -- if (fst p + (fst d1 )
+--checkAdjacent :: Board ->[(Position)] -> Col -> Direction -> [Position]
+--checkAdjacent b pos col dir = foldr (\(p1, p2) acc -> let new_pos = (p1+fst dir, p2+snd dir) in
+--                                                     if  new_pos `elem` pos
+--                                                        then new_pos:acc
+--                                                     else acc
+--                                ) [] pos
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--generateMoves :: Board -> Col -> [(Position)]
+--generateMoves b c = let x = valid in trace (show valid) [(2,2)]
+--                      where all_pos = [(x,y) | x <- filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]], y <- dirs]
+--                            valid = filter (\((x,y),(d1,d2)) -> ((x+d1) >= 0 && (x+d1) <= s) && ((y+d2) >= 0 && (y+d2) <= s)) all_pos
+--                            s = fromIntegral (size b)
+--
+--
+--filterGoodMoves :: Board -> Col -> [(Position, Direction)] -> Bool
+--filterGoodMoves b c [] = False
+--filterGoodMoves b c (x:xs) = undefined
+
+
+--checkPosition b p d c (target b) == True = True
+--                           | otherwise = checkPositions b c (filter (`notElem` (map (\(x,y) -> ((x,y),d)) $ createLine b p d)) xs)
+--                        where p = fst x
+--                              d = snd x
+--
+--checkPosition :: Board -> Position -> Direction -> Col -> Int -> Bool
+--checkPosition b p d c 1 = True
+--checkPosition b p d c n | (fst p + fst d, snd p +snd d) `notElem` map (fst) (filter ((==c).snd) (pieces b)) = False
+--                        | otherwise = checkPosition b (fst p + fst d, snd p +snd d) d c (n-1)
+--
+--
+
+
+
+--
+--foldr (\(p1, p2) acc -> \k -> if (p1, p2 )
+--
+--                            ) []  map fst $ filter ((==c).snd) (pieces b)
+--
+--                    where poss_moves =
+
+
+
+
+--foldr (\x acc-> evalulateFullLine b (pieces b) col x) 0 dirs
+
+
+
+
+
+
+--
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 --getBestMove 2 gt = snd $ maximum $ let x = zip (map ((minimax (2)).snd) (next_moves gt)) (map fst (next_moves gt)) in trace(show x) x

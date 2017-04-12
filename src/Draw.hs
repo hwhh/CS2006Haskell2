@@ -24,6 +24,7 @@ drawWorld w |  False    = translate (-330.0) 0.0 (text ((show $ fromJust $ snd g
 
 
 
+
 drawGrid :: Board -> Picture
 drawGrid b = pictures[uncurry translate (cellToScreen b x y o) $ color black $ rectangleWire (width/s)  (height/s) | x <- [0 .. s-1], y <- [0 ..s-1]]
                    where s = fromIntegral (size b)

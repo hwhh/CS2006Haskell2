@@ -6,7 +6,8 @@ import Data.Maybe
 
 dirs = [(0.0, -1.0), (1.0, -1.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0), (-1.0, 1.0), (-1.0, 0), (-1.0, -1.0)]
 
-
+data Cell = B | W | E
+    deriving (Show, Eq)
 
 data Col = Black | White
   deriving (Show, Eq)
@@ -34,8 +35,11 @@ data Board = Board { size :: Int,
                    }
   deriving Show
 
+
+
+
 -- Default board is 6x6, target is 3 in a row, no initial pieces
-initBoard = Board 6 3 [] (False, Nothing)
+initBoard = Board 6 4 [] (False, Nothing)
 
 -- Overall state is the board and whose turn it is, plus any further
 -- information about the world (this may later include, for example, player
@@ -45,13 +49,15 @@ initBoard = Board 6 3 [] (False, Nothing)
 -- will be useful (information for the AI, for example, such as where the
 -- most recent moves were).
 data World = World { board :: Board,
-                     turn :: Col}
+                     turn :: Col,
+                     last_move :: Maybe (Position, Col)
+                     }
  deriving Show
 
 data AI = AI {col :: Col,
               previous_moves :: [(Position, Col)]}
 
-initWorld = World initBoard Black
+initWorld = World initBoard Black Nothing
 
 
 -- Play a move on the board; return 'Nothing' if the move is invalid
@@ -126,13 +132,45 @@ createLine b p d | d == (1.0, -1.0) || d == (-1.0, 1.0)  = let x = fst $ getX p 
 
 
 
+
+getNextPos:: Int -> Float -> Float
+getNextPos count dir | dir == 0 = 0
+                     | dir <  0 = dir - (fromIntegral $ count)
+                     | dir >  0 = dir + (fromIntegral $ count)
+
+
+
+
+evaluteLine  :: Board -> [Position] -> Position -> Direction -> Int -> Int
+evaluteLine b pos p d 3 = 3
+evaluteLine b pos p d n | p `notElem` pos = n
+                        | otherwise = evaluteLine b pos next_pos d (n+1)
+                        where next_pos = (fst p + (getNextPos n (fst d)), snd p + (getNextPos n (fst d)))
+
+
+
 evaluate :: Board -> Col -> Int
-evaluate b c = case fst $ won b of
-                True -> if  fromJust (snd (won b)) == Black then 1000 else -1000
-                False -> 0
+evaluate b col = acc
+                where my_pices = map (fst) (filter ((==col).snd) (pieces b))
+                      acc = foldr(\(x,y) acc -> (foldr (\(d1,d2) acc -> acc + (evaluteLine b my_pices (x,y) (d1,d2) 0)) 0 dirs)) 0 my_pices
+
+
+--checkWinPossible :: Int-> [Position] -> (Position, Direction) -> Bool
+--checkWinPossible 2 _ _ = True
+--checkWinPossible count all_p (p,d) | y `notElem` all_p = False
+--                                   | otherwise = checkWinPossible (count+1) all_p (p,d)
+--                                   where x = (fst p + (getNextPos count (fst d)), snd p + (getNextPos count (snd d)))
+--                                         y = trace (show x) x
 
 
 
 
+--                      acc = foldr (\x acc-> evalulateFullLine b 100 (pieces b) col x) 0 dirs
+-- foldr (\((p1, p2),c) acc -> if ((p1+fst dir, p2+snd dir),c) `elem` (pieces b) then acc+score else 0) 1 pos
 
 
+
+--evalulateFullLine :: Board -> Col-> Int -> Int -> Position -> Direction -> Int
+--evalulateFullLine _ _ 300 _ _ _ = 300
+--evalulateFullLine b c n count p d | (fst p + (getNextPos count (fst d)), snd p + (getNextPos count (snd d))) `notElem` map (fst) (filter ((==c).snd) (pieces b)) =  n
+--                                  | otherwise = evalulateFullLine b c (n+100) (count+1) p d
