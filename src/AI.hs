@@ -46,31 +46,55 @@ buildTree gen b c = let moves = gen b c in -- generated moves
 -- traverse the game tree up to a certain depth, and pick the move which
 -- leads to the position with the best score for the player whose turn it
 -- is at the top of the game tree.
+--
+--minimax :: Int -> GameTree -> Int
+--minimax 0 (GameTree b col _)    = let x = evaluate b col in trace (show b ++ " " ++ show x) x
+--minimax d (GameTree b col [])   = evaluate b col
+--minimax d (GameTree b Black xs) = maximum $ map (minimax (d - 1)) (map snd (xs))
+--minimax d (GameTree b White xs) = minimum $ map (minimax (d - 1)) (map snd (xs))
 
-minimax :: Int -> GameTree -> Int
-minimax 0 (GameTree b col _)    = let x = evaluate b col in trace (show x) x
-minimax d (GameTree b col [])   = evaluate b col
-minimax d (GameTree b Black xs) = maximum $ map (minimax (d - 1)) (map snd (xs))
-minimax d (GameTree b White xs) = minimum $ map (minimax (d - 1)) (map snd (xs))
+--
+--minimax :: Int -> GameTree -> Int
+--minimax 0 gt  = evaluate (game_board gt) (other (game_turn gt)) -- in trace (show (game_board gt) ++ " " ++ show x ++ " " ++show  (game_turn gt)) x
+--minimax d gt | length (next_moves gt) == 0 = minBound :: Int
+--             |  otherwise =  let score = minimum (map (minimax (d-1)) (map snd (next_moves gt))) in evaluate (game_board gt) (other (game_turn gt))
+--
+--
 
 
+---  |  (game_turn gt) == Black =  maximum $ map (minimax (d - 1)) (map snd (next_moves gt)) -- let x = maximum $ map (minimax (d - 1)) (map snd (next_moves gt))  in trace (show (game_board gt) ++ " " ++ show x ++ " " ++show  (game_turn gt)) x ---
+--             | (game_turn gt) == White =  minimum $ map (minimax (d - 1)) (map snd (next_moves gt)) -- let x = minimum $ map (minimax (d - 1)) (map snd (next_moves gt))  in trace (show (game_board gt) ++ " " ++ show x ++ " " ++show  (game_turn gt)) x
 
-minimax_ab :: Int -> Int -> Int -> GameTree -> Int
-minimax_ab 0 a b (GameTree board col _)   = a `max` evaluate board col `min` b
-minimax_ab d a b (GameTree board col [])  = a `max` evaluate board col `min` b
-minimax_ab d a b (GameTree board col xs) = cmx a (map snd (xs))
-    where cmx a []  = a
-          cmx a (x:xs) | a'>=b     = a'
-                       | otherwise = cmx a' xs
-                       where a' = -(minimax_ab (d-1) (-b) (-a) x)
+
+--minimax :: Int -> Int -> Int -> GameTree -> Int
+--minimax 0 a b gt  = let x = evaluate (game_board gt) (game_turn gt) in trace (show (game_board gt) ++ " " ++ show x) x
+--minimax d a b gt | (game_turn gt) == Black = cmx a (map snd (next_moves gt)) --minimum $ map (minimax (d - 1)) (map snd (next_moves gt))
+--                 | (game_turn gt) == White = cmx b (map snd (next_moves gt)) --maximum $ map (minimax (d - 1)) (map snd (next_moves gt))
+--                 where cmx a []  = a
+--                       cmx a (x:xs) | a'>=b     = a'
+--                                    | otherwise = cmx a' xs
+--                                     where a' = (minimax (d-1) (b) (-a) x)
+
+-- | fst (won (game_board gt)) == True =  10000--evaluate (game_board gt) (game_turn gt) in trace ("HERE" ++ show (game_board gt) ++ " "++ show x) x
+
+
+minimax :: Int -> Bool-> GameTree -> Int
+minimax 0 _ gt = evaluate (game_board gt) (other (game_turn gt))
+minimax d True gt = foldr(\child x  -> x `max` (minimax (d-1) False child )) best_vale $ map snd (next_moves gt)
+                   where best_vale = minBound :: Int
+minimax d False gt = foldr(\child x -> x `min` (minimax (d-1) True child)) best_vale $ map snd (next_moves gt)
+                   where best_vale = maxBound :: Int
 
 getBestMove :: Int -- ^ Maximum search depth
                -> GameTree -- ^ Initial game tree
                -> Position
-getBestMove n gt = snd $ maximum $ let x = zip (map (minimax (n-1).snd) (next_moves gt)) (map fst (next_moves gt)) in trace(show x)  x
-                   --snd $ maximum $ let x = zip (map (minimax_ab (n-1) alpha beta.snd) (next_moves gt)) (map fst (next_moves gt)) in trace(show x)  x
+getBestMove n gt = snd $ maximum $ let x = zip (map (minimax (2) True . snd) (next_moves gt)) (map fst (next_moves gt)) in trace(show x)  x
+                            --snd $ maximum $ let x = zip (map (minimax (2).snd) (next_moves gt)) (map fst (next_moves gt)) in trace(show x)  x
                             where alpha = minBound :: Int
                                   beta  = maxBound :: Int
+
+
+
 
 
 
@@ -110,7 +134,9 @@ updateWorld t w | turn w == White = w{last_move=  Just lm}
 -}
 
 generateMoves :: Board -> Col -> [(Position)]
-generateMoves b c = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
+generateMoves b c =
+                    filter (\(x,y) -> (x,y) `notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
+
 -- | length (pieces b) == 0 = [(2.0,2.0)]
 --                  | otherwise = concat $ getAdjacentMoves all_poss $ map fst $ filter ((==c).snd) (pieces b)
 --                   where all_poss = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]

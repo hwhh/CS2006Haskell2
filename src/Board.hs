@@ -39,7 +39,7 @@ data Board = Board { size :: Int,
 
 
 -- Default board is 6x6, target is 3 in a row, no initial pieces
-initBoard = Board 6 4 [] (False, Nothing)
+initBoard = Board 6 3 [] (False, Nothing)
 
 -- Overall state is the board and whose turn it is, plus any further
 -- information about the world (this may later include, for example, player
@@ -94,22 +94,25 @@ For every position ((x, y), col) in the 'pieces' list:
 -}
 
 checkWon :: Board -> Col -> Bool
-checkWon b c = checkPositions b c combinations
+checkWon b c = if checkPositions b c (target b) combinations == 1 then True else False
               where combinations = [(x, y) | x <-  map (fst) (filter ((==c).snd) (pieces b)), y <- dirs]
 
 
-checkPositions :: Board -> Col -> [(Position, Direction)] -> Bool
-checkPositions b c [] = False
-checkPositions b c (x:xs) | checkPosition b p d c (target b) == True = True
-                          | otherwise = checkPositions b c (filter (`notElem` (map (\(x,y) -> ((x,y),d)) $ createLine b p d)) xs)
-                        where p = fst x
-                              d = snd x
+checkPositions :: Board -> Col -> Int -> [(Position, Direction)] -> Int
+checkPositions _ _ _ [] = 0
+checkPositions b c target (x:xs) | checkPosition b p d c target == True = 1
+                                 | otherwise = checkPositions b c target xs --(filter (`notElem` (map (\(x,y) -> ((x,y),d)) $ createLine b p d)) xs)
+                                where p = fst x
+                                      d = snd x
 
 checkPosition :: Board -> Position -> Direction -> Col -> Int -> Bool
-checkPosition b p d c 1 = True
-checkPosition b p d c n | (fst p + fst d, snd p +snd d) `notElem` map (fst) (filter ((==c).snd) (pieces b)) = False
-                        | otherwise = checkPosition b (fst p + fst d, snd p +snd d) d c (n-1)
+checkPosition b p d c 0 | p `notElem` map (fst) (pieces b) && onBoard p = True
+                        | otherwise = False
+checkPosition b p d c n | p `notElem` map (fst) (filter ((==c).snd) (pieces b)) = False
+                        | otherwise = checkPosition b (fst p + fst d, snd p + snd d) d c (n-1)
 
+onBoard :: Position -> Bool
+onBoard p = if (fst p >= 0 && fst p < 6) && (snd p >= 0 && snd p < 6) then True else False
 
 getX :: Position -> Float -> Position
 getX (x, 0) d = (x, 0)
@@ -131,28 +134,35 @@ createLine b p d | d == (1.0, -1.0) || d == (-1.0, 1.0)  = let x = fst $ getX p 
 -- return an integer indicating how good the board is for that colour.
 
 
-
-
-getNextPos:: Int -> Float -> Float
-getNextPos count dir | dir == 0 = 0
-                     | dir <  0 = dir - (fromIntegral $ count)
-                     | dir >  0 = dir + (fromIntegral $ count)
-
-
-
-
-evaluteLine  :: Board -> [Position] -> Position -> Direction -> Int -> Int
-evaluteLine b pos p d 3 = 3
-evaluteLine b pos p d n | p `notElem` pos = n
-                        | otherwise = evaluteLine b pos next_pos d (n+1)
-                        where next_pos = (fst p + (getNextPos n (fst d)), snd p + (getNextPos n (fst d)))
-
+scoreLine :: Board -> Col -> Int-> [(Position, Direction)] -> Int
+scoreLine b c no combinations = checkPositions b c no combinations * (no*10)
 
 
 evaluate :: Board -> Col -> Int
-evaluate b col = acc
-                where my_pices = map (fst) (filter ((==col).snd) (pieces b))
-                      acc = foldr(\(x,y) acc -> (foldr (\(d1,d2) acc -> acc + (evaluteLine b my_pices (x,y) (d1,d2) 0)) 0 dirs)) 0 my_pices
+evaluate b col = (checkPositions b col 2 combinations)*10 + (checkPositions b col 3 combinations)*10
+                where score = 0
+                      max = maxBound :: Int
+                      combinations = [(x, y) | x <-  map fst (filter ((==col).snd) (pieces b)), y <- dirs]
+
+
+
+
+
+
+
+--
+--getNextPos:: Int -> Float -> Float
+--getNextPos count dir | dir == 0 = 0
+--                     | dir <  0 = dir - (fromIntegral $ count)
+--                     | dir >  0 = dir + (fromIntegral $ count)
+--
+--
+--checkClosed :: Board -> Col -> (Position, Direction) -> Int -> Bool
+--checkClosed _ _ _ 0 = False
+--checkClosed b c (p,d) n | (next_pos, other c) `elem` (pieces b) = True
+--                        | otherwise = checkClosed b c (next_pos,d) (n-1)
+--                        where next_pos = (fst p + fst d, snd p + snd d)
+
 
 
 --checkWinPossible :: Int-> [Position] -> (Position, Direction) -> Bool

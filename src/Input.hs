@@ -7,7 +7,7 @@ import AI
 
 import Debug.Trace
 
-fieldSize@(width, height) = (420, 420) :: (Float, Float)
+fieldSize@(width, height) = (660, 480) :: (Float, Float)
 
 -- Update the world state given an input event. Some sample input events
 -- are given; when they happen, there is a trace printed on the console
@@ -26,7 +26,7 @@ handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w | turn w == White 
                                                                                       Nothing -> trace ("2. Left button pressed at: " ++ (show $ (f, s))) w
                                                                                 where b = board w
                                                                                       col = turn w
-                                                                                      (f, s) = screenToCell b (resolveCoordinates x 70.0) (resolveCoordinates y 70.0)
+                                                                                      (f, s) = screenToCell b x y
 handleInput (EventKey (Char k) Down _ _) b
     = trace ("Key " ++ show k ++ " down") b
 handleInput (EventKey (Char k) Up _ _) b
@@ -40,14 +40,14 @@ screenToCell b x y = (fromIntegral $ ceiling $ x / (width/ s) + offset ,  fromIn
                   offset = s / 3
 
 
-resolveCoordinates :: Float -> Float -> Float
-resolveCoordinates c i = if abs(cl - c) > abs(fl - c)
-                            then trace ("returned floor " ++(show $ fl)) fl
-                         else
-                            trace ("returned ceiling " ++(show $ cl)) cl
-                       where
-                        cl =  i * fromIntegral(ceiling(c / i))
-                        fl =  i * fromIntegral(floor(c / i))
+--resolveCoordinates :: Float -> Float -> Float
+--resolveCoordinates c i = if abs(cl - c) > abs(fl - c)
+--                            then trace ("returned floor " ++(show $ fl)) fl
+--                         else
+--                            trace ("returned ceiling " ++(show $ cl)) cl
+--                       where
+--                        cl =  i * fromIntegral(ceiling(c / i))
+--                        fl =  i * fromIntegral(floor(c / i))
 
 {- Hint: when the 'World' is in a state where it is the human player's
  turn to move, a mouse press event should calculate which board position
