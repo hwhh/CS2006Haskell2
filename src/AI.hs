@@ -54,13 +54,15 @@ minimax d False gt =if length (next_moves gt) == 0 then minBound :: Int else fol
                    where best_vale = (maxBound :: Int)-1
 
 
-minimax_ab :: Int -> Int -> Int-> GameTree -> Int
+minimax_ab :: Int -> Int -> Int -> GameTree -> Int
 minimax_ab 0 a b gt = evaluate (game_board gt) (other (game_turn gt))
-minimax_ab d a b gt = cmx a (map snd (next_moves gt))
-                   where cmx a []  = a
-                         cmx a (x:xs) | a'>=b     = a'
+minimax_ab d a b gt | length (next_moves gt) == 0 && (game_turn gt) == Black = (maxBound :: Int)
+                    | length (next_moves gt) == 0 && (game_turn gt) == White = (minBound :: Int)
+                    | otherwise = cmx a (map snd (next_moves gt))
+                    where cmx a []  = a
+                          cmx a (x:xs) | a'>=b     = a'
                                       | otherwise = cmx a' xs
-                                     where a' = (minimax_ab (d-1) (-b) (-a) x)
+                                     where a' = -(minimax_ab (d-1) (-b) (-a) x)
 
 getBestMove :: Int -- ^ Maximum search depth
                -> GameTree -- ^ Initial game tree
@@ -102,23 +104,51 @@ updateWorld t w | turn w == White = w{last_move=  Just lm}
  player has won and display a message if so.
 -}
 
-generateMoves :: Board -> Col -> [(Position)]
-generateMoves b c =
-                    filter (\(x,y) -> (x,y) `notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
+generateMoves :: Board -> Col -> [Position]
+generateMoves b c |length (pieces b) == 0  = [(2,2)]
+                  |length winning     > 0  = trace ("winnig" ++show winning) winning
+                  |length good        > 0  = good
+                  |otherwise               = all
+                   where all = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
+                         winning = let x = getWinningMoves b c all in trace (show c ++ " "++show x++" "++show b) x
+                         good = getBestMoves b c all
 
--- | length (pieces b) == 0 = [(2.0,2.0)]
---                  | otherwise = concat $ getAdjacentMoves all_poss $ map fst $ filter ((==c).snd) (pieces b)
---                   where all_poss = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
+
+getWinningMoves :: Board -> Col -> [Position] ->[Position]
+getWinningMoves b c all_moves = foldr(\(x,y) acc-> case makeMove b c (x,y) of
+                                                            Just new_board -> if fst (won new_board) then (x,y):acc else acc
+                                                            Nothing -> acc
+                                       ) [] all_moves
 
 
-getAdjacentMoves ::[Position] -> [Position] -> [[Position]]
-getAdjacentMoves all p = foldr (\(x,y) acc ->
-                                    (foldr(\(d1, d2) acc1 ->
-                                        let new_pos_1 = (x+d1,y+d2)
-                                            new_pos_2 = (x+(d1+d1), y+(d2+d2)) in
-                                              if new_pos_1 `elem` all ||  new_pos_2 `elem` all then new_pos_1:new_pos_2:acc1 else acc1
-                                    )[] dirs
-                           ):acc) [] p
+getBestMoves :: Board -> Col -> [Position] ->[Position]
+getBestMoves b c all_moves = foldr(\(x,y) acc-> case makeMove b c (x,y) of
+                                                      Just new_board -> if (evaluate new_board c) > 0 then (x,y):acc else acc
+                                                      Nothing -> acc
+                                 ) [] all_moves
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--getAdjacentMoves ::[Position] -> [Position] -> [[Position]]
+--getAdjacentMoves all p = foldr (\(x,y) acc ->
+--                                    (foldr(\(d1, d2) acc1 ->
+--                                        let new_pos_1 = (x+d1,y+d2)
+--                                            new_pos_2 = (x+(d1+d1), y+(d2+d2)) in
+--                                              if new_pos_1 `elem` all ||  new_pos_2 `elem` all then new_pos_1:new_pos_2:acc1 else acc1
+--                                    )[] dirs
+--                           ):acc) [] p
 
 
 

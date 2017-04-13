@@ -39,7 +39,7 @@ data Board = Board { size :: Int,
 
 
 -- Default board is 6x6, target is 3 in a row, no initial pieces
-initBoard = Board 6 3 [] (False, Nothing)
+initBoard = Board 6 4 [] (False, Nothing)
 
 -- Overall state is the board and whose turn it is, plus any further
 -- information about the world (this may later include, for example, player
@@ -135,12 +135,15 @@ createLine b p d | d == (1.0, -1.0) || d == (-1.0, 1.0)  = let x = fst $ getX p 
 
 
 
-scorePartialLine :: Board -> Col -> Int ->  [(Position, Direction)] -> Int
-scorePartialLine b col no combinations = undefined
+--scorePartialLine :: Board -> Col -> Int ->  [(Position, Direction)] -> Int
+--scorePartialLine b col count [] = count
+--scorePartialLine b col count (x:xs) = scorePartialLine b col (foldr (\(x,y) acc-> if ((x,y),col) `elem` (pieces b) then acc+1 else acc) 0 (createLine b (fst x) (snd x))) xs
+
 
 evaluate :: Board -> Col -> Int
 evaluate b col = (checkPositions b col 2 combinations)*20
-                 + (checkPositions b col 3 combinations)*30
+               + (checkPositions b col 3 combinations)*30
+
                  -- + (checkPositions b col 4 combinations)*40
 
                 where max = maxBound :: Int
