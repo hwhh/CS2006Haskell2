@@ -134,14 +134,16 @@ createLine b p d | d == (1.0, -1.0) || d == (-1.0, 1.0)  = let x = fst $ getX p 
 -- return an integer indicating how good the board is for that colour.
 
 
-scoreLine :: Board -> Col -> Int-> [(Position, Direction)] -> Int
-scoreLine b c no combinations = checkPositions b c no combinations * (no*10)
 
+scorePartialLine :: Board -> Col -> Int ->  [(Position, Direction)] -> Int
+scorePartialLine b col no combinations = undefined
 
 evaluate :: Board -> Col -> Int
-evaluate b col = (checkPositions b col 2 combinations)*10 + (checkPositions b col 3 combinations)*10
-                where score = 0
-                      max = maxBound :: Int
+evaluate b col = (checkPositions b col 2 combinations)*20
+                 + (checkPositions b col 3 combinations)*30
+                 -- + (checkPositions b col 4 combinations)*40
+
+                where max = maxBound :: Int
                       combinations = [(x, y) | x <-  map fst (filter ((==col).snd) (pieces b)), y <- dirs]
 
 
