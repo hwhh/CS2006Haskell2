@@ -40,14 +40,13 @@ screenToCell b x y = (fromIntegral $ ceiling $ x / (width/ s) + offset ,  fromIn
                   offset = s / 3
 
 
---resolveCoordinates :: Float -> Float -> Float
---resolveCoordinates c i = if abs(cl - c) > abs(fl - c)
---                            then trace ("returned floor " ++(show $ fl)) fl
---                         else
---                            trace ("returned ceiling " ++(show $ cl)) cl
---                       where
---                        cl =  i * fromIntegral(ceiling(c / i))
---                        fl =  i * fromIntegral(floor(c / i))
+resolveCoordinates :: Float -> Float -> Float
+resolveCoordinates c i = case  abs(cl - c) > abs(fl - c) of
+                            True  -> fl
+                            False ->cl
+                       where
+                        cl =  i * fromIntegral(ceiling(c / i))
+                        fl =  i * fromIntegral(floor(c / i))
 
 {- Hint: when the 'World' is in a state where it is the human player's
  turn to move, a mouse press event should calculate which board position

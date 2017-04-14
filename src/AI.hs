@@ -106,11 +106,11 @@ updateWorld t w | turn w == White = w{last_move=  Just lm}
 
 generateMoves :: Board -> Col -> [Position]
 generateMoves b c |length (pieces b) == 0  = [(2,2)]
-                  |length winning     > 0  = trace ("winnig" ++show winning) winning
-                  |length good        > 0  = good
+                  |length winning     > 0  =  winning
+                  |length good        > 0  = trace ("good" ++show good) good
                   |otherwise               = all
                    where all = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.0..fromIntegral $ size b -1], y <-[0.0..fromIntegral $ size b -1]]
-                         winning = let x = getWinningMoves b c all in trace (show c ++ " "++show x++" "++show b) x
+                         winning = getWinningMoves b c all
                          good = getBestMoves b c all
 
 
