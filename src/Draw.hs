@@ -21,12 +21,8 @@ drawWorld w |  False    = translate (-330.0) 0.0 (text ((show $ fromJust $ snd g
                    where b = board w
                          game_won = won b
 
-
-
-
-
 drawGrid :: Board -> Picture
-drawGrid b = pictures[uncurry translate (cellToScreen b x y) $ color black $ rectangleWire (width/s)  (height/s) | x <- [0 .. s-1], y <- [0 ..s-1]]
+drawGrid b = pictures[uncurry translate (cellToScreen b x y (55, 40)) $ color black $ rectangleWire (width/s)  (height/s) | x <- [0 .. s-1], y <- [0 ..s-1]]
                    where s = fromIntegral (size b)
 
 drawPNG ::  Col -> Picture
@@ -37,30 +33,15 @@ drawPNG col
 drawPices::  Board -> Picture
 drawPices b = pictures(foldr (\((f, s), c) acc ->
                         if c == Black then
-                            (uncurry translate (cellToScreen b f s) (drawPNG Black )) : acc
+                            (uncurry translate (cellToScreen b f s (0,0)) (drawPNG Black )) : acc
                         else
-                            (uncurry translate (cellToScreen b f s) (drawPNG White )) : acc
+                            (uncurry translate (cellToScreen b f s (0,0)) (drawPNG White )) : acc
                         )
                 [] $ pieces b)
 
-cellToScreen :: Board -> Float -> Float -> (Float, Float)
-cellToScreen b x y = (x_start + (x * (width / fromIntegral (size b)) + x_offset), y_start - (y * (height / fromIntegral (size b))) -y_offset)
+cellToScreen :: Board -> Float -> Float -> (Float, Float)->(Float, Float)
+cellToScreen b x y (x_offset, y_offset)= (x_start + (x * (width / fromIntegral (size b)) + x_offset), y_start - (y * (height / fromIntegral (size b))) -y_offset)
                     where x_start = (-(width/2))
                           y_start = (height/2)
-                          x_offset = 55
-                          y_offset = 40
 
-
-
---drawPieces :: Board -> Picture
---drawPieces b = pictures (drawBlackPieces b: drawWhitePieces b :[])
-
-
---drawBlackPieces :: Board -> Picture
---drawBlackPieces b = pictures [uncurry translate(cellToScreen b (fromIntegral (fst (x))) (fromIntegral(snd (x))))$ color black $ circle 10
---                                            | x <- (foldr (\((f, s), c) acc -> (f, s):acc) [] $ filter ((== Black).snd) $ pieces b)]
---
---drawWhitePieces :: Board -> Picture
---drawWhitePieces b = pictures [uncurry translate(cellToScreen b (fromIntegral (fst (x))) (fromIntegral(snd (x))))$ color red $ circle 10
---                                            | x <- (foldr (\((f, s), c) acc -> (f, s):acc) [] $ filter ((== White).snd) $ pieces b)]
 
