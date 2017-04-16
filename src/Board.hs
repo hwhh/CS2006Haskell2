@@ -3,6 +3,7 @@ module Board where
 import Data.List
 import Debug.Trace
 import Data.Maybe
+import Data.List.Split
 
 dirs = [(0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
 --          0             1             2           3           4           5           6           7
@@ -121,59 +122,73 @@ checkWon b c = if checkLines b c (target b) combinations == 1 then True else Fal
 
 checkLines :: Board -> Col -> Int -> [(Position, Direction)] -> Int
 checkLines _ _ _ [] = 0
-checkLines b c target (x:xs) | checkLine target b c (createLine b s (x:[])) == target = 1
+checkLines b c target (x:xs) | maximum (map fst (checkLine target b c (createLine b s (x:[])))) == target = 1
                              | otherwise = checkLines b c target xs
                              where s = (size b)
 
 
-checkLine :: Int -> Board -> Col -> [Position] -> Int
-checkLine target b c pos  = foldr (\(x,y) acc ->
-                               case ((x,y),c) `elem` (pieces b) of
-                                     True -> acc+1
-                                     False -> if acc >= target then acc else 0
-                               ) 0 pos
+--checkLine :: Int -> Board -> Col -> [Position] -> (Int, [Position])
+--checkLine target b c pos  = foldl (\(s,p) (x,y)  ->
+--                               case ((x,y),c) `elem` (pieces b) of
+--                                     True -> (s+1, (x,y):p)
+--                                     False -> if s >= target then (s,p) else (0, [])
+--                               ) (0, []) pos
 
---checkPositions :: Board -> Col -> Int -> [(Position, Direction)] -> Int
---checkPositions _ _ _ [] = 0
---checkPositions b c target (x:xs) | checkPosition b p d c target == True = 1
---                                 | otherwise = checkPositions b c target xs --(filter (`notElem` (map (\(x,y) -> ((x,y),d)) $ createLine b p d)) xs)
---                                where p = fst x
---                                      d = snd x
+--checkLine :: Int -> Board -> Col -> [Position] -> [(Int, Maybe Col)]
+--checkLine target b c pos  = tail $ scanl (\(s,p) (x,y)  ->  if ((x,y),c) `elem` (pieces b) then (s+1, Just c)
+--                                                     else if ( ((x,y),(other c)) `elem` (pieces b) ) then (0, Just (other c))
+--                                                     else (0, Nothing)
+--                                       ) (0, Nothing)  pos
 
-onBoard :: Position -> Bool
-onBoard p = if (fst p >= 0 && fst p < 6) && (snd p >= 0 && snd p < 6) then True else False
+checkLine :: Int -> Board -> Col -> [Position] -> [(Int, (Position, Maybe Col))]
+checkLine target b c pos  = tail $ scanl (\(s,(p,col)) (x,y)  ->  if ((x,y),c) `elem` (pieces b) then (s+1, ((x,y), Just c))
+                                                          else if ( ((x,y),(other c)) `elem` (pieces b) ) then (0, ((x,y), Just (other c)))
+                                                             else (0, ((x,y), Nothing))
+                               ) (0, ((pos!!0), Nothing))  pos
 
-checkPosition :: Board -> Position -> Direction -> Col -> Int -> Bool
-checkPosition b p d c 0 | p `notElem` map (fst) (pieces b) && onBoard p = True
-                        | otherwise = False
-checkPosition b p d c n | p `notElem` map (fst) (filter ((==c).snd) (pieces b)) = False
-                        | otherwise = checkPosition b (fst p + fst d, snd p + snd d) d c (n-1)
---
 
---countAdjacentPieces :: Board -> [Position] -> [Maybe Col]
---countAdjacentPieces b pos =  map (\(x,y) -> if  ((x,y),Black) `elem` (pieces b) then Just Black
---                                           else if ((x,y),White) `elem` (pieces b) then Just White
---                                           else Nothing
---                                   ) pos
---
-getScore:: Board -> Col -> [(Position, Direction)] -> Int -> Int
-getScore b c poss len = foldl(\acc (p,d) -> if (checkPosition b p d c len) then acc+1 else acc) 0 poss
+checkWinnable :: Board ->  [(Int, (Position, Maybe Col))] -> Col -> Bool
+checkWinnable b posses c = (foldl(\acc (s, (p, col)) -> case col of
+                                                          Just col -> if col == c then acc else 0
+                                                          Nothing -> acc+1
+
+                                        ) 0 posses ) >= (target b)
+
+scoreRow :: Board ->  [(Int, (Position, Maybe Col))] -> Col -> Int
+scoreRow b posses c | checkWinnable b posses c == False = 0
+                    | otherwise = maximum $ scanl(\acc (s, (p, col)) -> case col of
+                                                                  Just col -> if col == c then acc+10 else 0
+                                                                  Nothing -> acc+2
+                                        )  0 posses
+
+                        -- where score_pos = zip (map fst posses) (map fst ((map snd) posses))
+
+
+--getTotalScore :: Board -> Col -> Bool
+--getTotalScore b c = if checkLines b c (target b) combinations == 1 then True else False
+--                   where combinations = createLines b -- [(x, y) | x <-  map (fst) (filter ((==c).snd) (pieces b)), y <- dirs]
+
+
+getScore :: Board -> Col -> Int -> [(Position, Direction)] -> Int
+getScore b c target lines = foldl(\acc x -> let l = createLine b s (x:[])
+                                                l' = checkLine target b c l in
+                                                case checkWinnable b l' c of
+                                                       True -> acc + (maximum $ map fst l')
+                                                       False -> acc
+                                   ) 0 lines
+                            where s = (size b)
+
+
+getPlayersScore :: Board -> Col -> Int
+getPlayersScore b col = let four  = (getScore b col 4 coms)*100
+                            three = (getScore b col 3 coms)*50
+                            two   = (getScore b col 2 coms)*25
+                            in (two + three + four)
+                        where coms = createLines b
 
 
 evaluate :: Board -> Col -> Int
-evaluate b col  | fst (won b) = 10000000
-                | otherwise =let own_score = (getScore b col p1 1)*10 + (getScore b col p1 2)*20 + (getScore b col p1 3)*30
-                                 thier_score = (getScore b col p2 1)*50 + (getScore b col p2 2)*50 + (getScore b col p2 3)*50
-                              in (own_score-thier_score)
-                where p1 = filter (\((x,y),(d1,d2)) -> (x+d1)<=s && (x+d1) >=0 && (y+d2)<=s && (y+d2) >=0) [(x, y) | x <-  map (fst) (filter ((==col).snd) (pieces b)), y <- dirs]
-                      p2 = filter (\((x,y),(d1,d2)) -> (x+d1)<=s && (x+d1) >=0 && (y+d2)<=s && (y+d2) >=0) [(x, y) | x <-  map (fst) (filter ((==(other col)).snd) (pieces b)), y <- dirs]
-                      s = fromIntegral (size b)
-                      combinations = createLines b
-
--- if 2, check 3, check 4, or check for empty
---((checkLines b col 2 combinations)*100+ (checkLines b col 3 combinations)*1000) -- + (checkLines b col 4 combinations)*(-100))
-                ---((checkLines b (other col) 2 combinations)*1000+ (checkLines b (other col) 3 combinations)*1000)
-
+evaluate b col =  (getPlayersScore b col) -  (getPlayersScore b (other col))
 
 
 createLines ::Board -> [(Position, Direction)]
@@ -192,3 +207,98 @@ createLine b n (p:pos) = createLine b (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
                              d2 = snd (snd p)
                              p1 = fst (fst p)
                              p2 = snd (fst p)
+
+
+
+
+--checkPositions :: Board -> Col -> Int -> [(Position, Direction)] -> Int
+--checkPositions _ _ _ [] = 0
+--checkPositions b c target (x:xs) | checkPosition b p d c target == True = 1
+--                                 | otherwise = checkPositions b c target xs --(filter (`notElem` (map (\(x,y) -> ((x,y),d)) $ createLine b p d)) xs)
+--                                where p = fst x
+--                                      d = snd x
+
+--((0,3),Black),((1,3),Black),((4,3),Black),((4,4),White),((6,3),Black),((3,4),White
+--(4,[(6,3),(4,3),(1,3),(0,3)])
+
+
+--
+--
+--
+--onBoard :: Position -> Bool
+--onBoard p = if (fst p >= 0 && fst p < 6) && (snd p >= 0 && snd p < 6) then True else False
+--
+--
+--
+--
+--countAdjacentPieces :: Board -> [Position] -> [Maybe Col]
+--countAdjacentPieces b pos =  map (\(x,y) -> if  ((x,y),Black) `elem` (pieces b) then Just Black
+--                                           else if ((x,y),White) `elem` (pieces b) then Just White
+--                                           else Nothing
+--                                   ) pos
+--
+--checkWinable :: Board -> Position -> Direction -> Col -> Int -> Bool
+--checkWinable b p d c 0 = True
+--checkWinable b p d c n | onBoard p == False = False
+--                       | p `elem` map (fst) (filter ((==c).snd) (pieces b))  = checkWinable b next d c (n-1)
+--                       | p `notElem` map (fst) (pieces b) = checkWinable b next d c (n-1)
+--                       | otherwise = False
+--                   where next = (fst p + fst d, snd p + snd d)
+--
+--
+--checkPosition :: Board -> Position -> Direction -> Col -> Int -> Bool
+--checkPosition b p d c 0 = True
+--checkPosition b p d c n | onBoard p == False = False
+--                        | p `elem` map (fst) (filter ((==c).snd) (pieces b))  = checkPosition b next d c (n-1)
+--                        | p `notElem` map (fst) (pieces b) = checkPosition b next d c (n-1)
+--                        | otherwise = False
+--                   where next = (fst p + fst d, snd p + snd d)
+--
+--
+----checkForOpens :: Int -> Board -> [(Position, Direction)] -> Col -> Int
+----checkForOpens no b posses col = foldl(\acc (p,d) -> if (checkPosition b p d  ) then acc+1 else acc) 0 posses
+--
+--
+--
+--
+--
+--
+
+--You might use an evaluation function based on ranking each square by the values of all the rows it is contained in
+
+--for each empty square on the board
+--   for each row of 5 containing that square
+--      add the value of that type of row to the value of the square
+--   end
+--end
+--11*15 horizontal rows of 5
+--15*11 vertical rows of 5
+--11*11 / diagonal rows of 5
+--11*11 \ diagonal rows of 5
+--A square in the middle of the board will be contained in
+--5 of those rows in each of 4 directions.
+--If a square is a member of a row of 4 X's, it's a win
+--If a square is a member of a row of 4 O's, it's a forced block.
+--If a square is a member of two different (but overlaping) rows of 3 X's
+--it's a forced win becaue playing there will create two rows of 4, and the opponent can only block one.
+
+
+--checkWinnable :: Board -> [Position] -> Bool
+--checkWinnable b pos = foldl (\x acc -> ) 0 pos
+--                    where t = (target b)
+--
+--scoreLines :: Col -> Board -> [Position]-> [Int]
+--scoreLines b p =  scanr (\x acc -> if ) True line
+--                  where line = countAdjacentPieces b p
+
+
+--                      s = fromIntegral (size b)
+--                      combinations = createLines b
+--                let own_score   = (getScore b col p1 2)*20 + (getScore b col p1 3)*30
+--                      thier_score = (getScore b (other col) p2 1)*10 + (getScore b (other col) p2 2)*20 + (getScore b (other col) p2 3)*30
+--                  in (own_score-thier_score)
+--                where
+
+-- if 4, check 3, check 2, or check for empty
+--((checkLines b col 2 combinations)*100+ (checkLines b col 3 combinations)*1000) -- + (checkLines b col 4 combinations)*(-100))
+                ---((checkLines b (other col) 2 combinations)*1000+ (checkLines b (other col) 3 combinations)*1000)
