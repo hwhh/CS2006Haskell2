@@ -22,8 +22,8 @@ drawWorld w |  False    = translate (-330.0) 0.0 (text ((show $ fromJust $ snd g
                          game_won = won b
 
 drawGrid :: Board -> Picture
-drawGrid b = pictures[uncurry translate (cellToScreen b x y (55, 40)) $ color black $ rectangleWire (width/s)  (height/s) | x <- [0 .. s-1], y <- [0 ..s-1]]
-                   where s = fromIntegral (size b)
+drawGrid b = pictures[uncurry translate (cellToScreen b x y (55, 40)) $ color black $ rectangleWire (width/(fromIntegral s))  (height/(fromIntegral s)) | x <- [0 .. s-1], y <- [0 ..s-1]]
+                   where s = (size b)
 
 drawPNG ::  Col -> Picture
 drawPNG col
@@ -39,8 +39,8 @@ drawPices b = pictures(foldr (\((f, s), c) acc ->
                         )
                 [] $ pieces b)
 
-cellToScreen :: Board -> Float -> Float -> (Float, Float)->(Float, Float)
-cellToScreen b x y (x_offset, y_offset)= (x_start + (x * (width / fromIntegral (size b)) + x_offset), y_start - (y * (height / fromIntegral (size b))) -y_offset)
+cellToScreen :: Board -> Int -> Int -> (Float, Float)->(Float, Float)
+cellToScreen b x y (x_offset, y_offset)= (x_start + ((fromIntegral x) * (width / fromIntegral (size b)) + x_offset), y_start - ((fromIntegral y) * (height / fromIntegral (size b))) -y_offset)
                     where x_start = (-(width/2))
                           y_start = (height/2)
 

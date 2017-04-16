@@ -1,6 +1,10 @@
 module Main where
 
+import Graphics.Gloss.Interface.IO.Game
 import Graphics.Gloss
+
+import System.Environment
+import System.IO
 
 import Board
 import Draw
@@ -21,9 +25,21 @@ import AI
 -- move
 
 main :: IO ()
-main = play (InWindow "Gomoku" (740, 580) (10, 10)) white 10
-            initWorld -- in Board.hs
-            drawWorld -- in Draw.hs
-            handleInput -- in Input.hs
-            updateWorld -- in AI.hs
+main = do   args <- getArgs
+            let flags = parseArguments args
+            initWorld <- makeWorld flags
+            putStrLn "The arguments are:"
+            play (InWindow "Gomoku" (740, 580) (10, 10)) white 10
+                initWorld -- in Board.hs
+                drawWorld -- in Draw.hs
+                handleInput -- in Input.hs
+                updateWorld -- in AI.hs
+
+
+parseArguments :: [String] -> Flags
+parseArguments args = foldl (\(Flags h w ) str -> case str of
+                                                  "-h" -> (Flags True w )
+                                                  "-w" -> (Flags h True)
+                                                  _    -> (Flags h w)) (Flags False False) args
+
 
