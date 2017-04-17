@@ -65,7 +65,7 @@ data World = World { board :: Board,
                      }
  deriving Show
 
-initBoard = Board 6 4 [] (False, Nothing)
+initBoard = Board 3 3 [] (False, Nothing)
 
 
 makeWorld :: Flags -> IO World
@@ -142,24 +142,46 @@ checkLines b c target (x:xs) | maximum (map fst (checkLine target b c (createLin
 
 checkLine :: Int -> Board -> Col -> [Position] -> [(Int, (Position, Maybe Col))]
 checkLine target b c pos  = tail $ scanl (\(s,(p,col)) (x,y)  ->  if ((x,y),c) `elem` (pieces b) then (s+1, ((x,y), Just c))
-                                                          else if ( ((x,y),(other c)) `elem` (pieces b) ) then (0, ((x,y), Just (other c)))
-                                                             else (0, ((x,y), Nothing))
+                                                                  else if ( ((x,y),(other c)) `elem` (pieces b) ) then (0, ((x,y), Just (other c)))
+                                                                  else (0, ((x,y), Nothing))
                                ) (0, ((pos!!0), Nothing))  pos
 
 
+
 checkWinnable :: Board ->  [(Int, (Position, Maybe Col))] -> Col -> Bool
-checkWinnable b posses c = (foldl(\acc (s, (p, col)) -> case col of
-                                                          Just col -> if col == c then acc else 0
-                                                          Nothing -> acc+1
+checkWinnable b (x:xs) c | length next_x < (target b+1) = True
+                         | otherwise = let  first = snd (snd x)
+                                            last  =  snd (snd xs !! (target b))
+                                            no = length . filter (\(s,(p,col)) -> col == Nothing) next_x
+                                        in if no
+                         where next_x =  take (target b) xs
 
-                                        ) 0 posses ) >= (target b)
 
-scoreRow :: Board ->  [(Int, (Position, Maybe Col))] -> Col -> Int
-scoreRow b posses c | checkWinnable b posses c == False = 0
-                    | otherwise = maximum $ scanl(\acc (s, (p, col)) -> case col of
-                                                                  Just col -> if col == c then acc+10 else 0
-                                                                  Nothing -> acc+2
-                                        )  0 posses
+
+
+
+
+--                                    scanl (\(a1, a2) (s, (p, col)) -> case col of
+--                                                                    Just col -> if col == c then ((a1+1), a2) else (0,0)
+--                                                                    Nothing -> (a1, a2+1)
+--                                    ) (0, 0) posses in trace (show x) False
+
+
+                                    -- in trace (show x) x >= (target b)
+
+--
+--scoreRow :: Board ->  [(Int, (Position, Maybe Col))] -> Col -> Int
+--scoreRow b posses c | checkWinnable b posses c == False = 0
+--                    | otherwise = let x = foldl(\(a1, a2) (s, (p, col)) -> case col of
+--                                                                               Just col -> if col == c  then (a1+10, a1+10 `max` a2)
+--                                                                                           else (0, a2)
+--                                                                               Nothing -> let new_a1 = a1+2 in if new_a1 > a2 then (new_a1, new_a1) else (new_a1,a2)
+--                                                 ) (0,0) posses in trace (show x) $ snd x
+
+--                                        let x =  foldl(\acc (s, (p, col)) -> case col of
+--                                                                    Just col -> if col == c then (s+10):acc else (s-8):acc
+--                                                                    Nothing -> 0:acc
+--                                        ) [] posses
 
                         -- where score_pos = zip (map fst posses) (map fst ((map snd) posses))
 
@@ -194,8 +216,8 @@ evaluate b col =  (getPlayersScore b col) -  (getPlayersScore b (other col))
 createLines ::Board -> [(Position, Direction)]
 createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
                 zip (zip (repeat 0) [0..s]) (repeat (1,0)) ++ --W && E
-                zip (zip [l,l-1..0] (repeat 0)) (repeat (1,1)) ++zip (zip (repeat 0) [1..l]) (repeat (1,1))++ -- NE && SW
-                zip (zip (repeat 0) [l..s]) (repeat (1,-1))++zip (zip [1..l] (repeat s)) (repeat (1,-1))  -- NE && SWx
+                zip (zip [l,l-1..0] (repeat 0)) (repeat (1,1)) ++zip (zip (repeat 0) [1..l]) (repeat (1,1))++
+                zip (zip (repeat 0) [l..s]) (repeat (1,-1))++zip (zip [1..l] (repeat s)) (repeat (1,-1))
                where s = size b
                      l = s - (target b)
 
@@ -246,13 +268,7 @@ createLine b n (p:pos) = createLine b (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
 --                   where next = (fst p + fst d, snd p + snd d)
 --
 --
---checkPosition :: Board -> Position -> Direction -> Col -> Int -> Bool
---checkPosition b p d c 0 = True
---checkPosition b p d c n | onBoard p == False = False
---                        | p `elem` map (fst) (filter ((==c).snd) (pieces b))  = checkPosition b next d c (n-1)
---                        | p `notElem` map (fst) (pieces b) = checkPosition b next d c (n-1)
---                        | otherwise = False
---                   where next = (fst p + fst d, snd p + snd d)
+
 --
 --
 ----checkForOpens :: Int -> Board -> [(Position, Direction)] -> Col -> Int

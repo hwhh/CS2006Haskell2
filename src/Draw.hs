@@ -22,7 +22,7 @@ drawWorld w |  False    = translate (-330.0) 0.0 (text ((show $ fromJust $ snd g
                          game_won = won b
 
 drawGrid :: Board -> Picture
-drawGrid b = pictures[uncurry translate (cellToScreen b x y (55, 40)) $ color black $ rectangleWire (width/(fromIntegral s))  (height/(fromIntegral s)) | x <- [0 .. s-1], y <- [0 ..s-1]]
+drawGrid b = pictures[uncurry translate (cellToScreen b x y (110 , 80)) $ color black $ rectangleWire (width/(fromIntegral s))  (height/(fromIntegral s)) | x <- [0 .. s-1], y <- [0 ..s-1]]
                    where s = (size b)
 
 drawPNG ::  Col -> Picture
