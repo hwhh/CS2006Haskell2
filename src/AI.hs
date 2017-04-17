@@ -93,17 +93,7 @@ minimax d False gt =if length (next_moves gt) == 0
 
 
 
---
---minimax :: Int -> Bool-> GameTree -> Int
---minimax 0 max gt = case max of
---                    True -> evaluate (game_board gt)  (game_turn gt) --maximum $ foldr(\pos acc -> evaluate (game_board gt)  (game_turn gt):acc) []  (next_moves gt)--foldr(\pos bv ->  bv `max` evaluate (game_board gt) (game_turn gt))         ((minBound :: Int)+1)  (next_moves gt)--maximum evaluate (game_board gt) $ other (game_turn gt) -- in trace (show (game_board gt) ++ " "++ show (game_turn gt) ++ " "++ show x ) x
---                    False -> evaluate (game_board gt) (other $ game_turn gt)
---minimax d True gt = if length (next_moves gt) == 0 then 1000000 else
---                    foldr(\child x  -> x `max` (minimax (d-1) False child)) best_vale $ map snd (next_moves gt)
---                   where best_vale = (minBound :: Int)+1
---minimax d False gt = if length (next_moves gt) == 0 then -1000000 else
---                    foldr(\child x -> x `min` (minimax (d-1) True child)) best_vale $ map snd (next_moves gt)
---                   where best_vale = (maxBound :: Int)-1
+
 
 getBestMove :: Int -- ^ Maximum search depth
                -> GameTree -- ^ Initial game tree
@@ -121,16 +111,18 @@ getBestMove n gt = --let x = foldl (\acc move -> (minimax (n-1) True move):acc) 
 updateWorld :: Float -- ^ time since last update (you can ignore this)
             -> World -- ^ current world state
             -> World
-updateWorld t w  | (turn w == h_player w) =  w{last_move=  Just lm}
-                 | otherwise = let move = getBestMove 3 $ buildTree generateMoves b col
-                                          in case makeMove (board w) (other $ h_player w) move of
-                                                 Just new_board -> case fst $ won new_board of
-                                                       True -> w {board = new_board, turn = other col, last_move= Just lm}
-                                                       False -> w {board = new_board, turn = other col, last_move= Just lm}
-                                                 Nothing -> w
-                   where b = board w
-                         col = turn w
-                         lm = pieces b !! 0
+updateWorld t w = w
+--                 | (turn w == h_player w) = let pd = (board w) in w{previous_board = pd}
+                 -- | (turn w == h_player2 w)
+--                 | otherwise = let move = getBestMove 3 $ buildTree generateMoves b col
+--                                          in case makeMove (board w) (other $ h_player w) move of
+--                                                 Just new_board -> case fst $ won new_board of
+--                                                       True -> w {board = new_board, turn = other col, previous_board = pd}
+--                                                       False -> w {board = new_board, turn = other col, previous_board = pd}
+--                                                 Nothing -> w
+--                   where b = board w
+--                         col = turn w
+--                         pd = (board w)
 
 
 
@@ -182,7 +174,19 @@ minimax_ab d a b gt | length (next_moves gt) == 0 && (game_turn gt) == Black = (
                                       | otherwise = cmx a' xs
                                      where a' = -(minimax_ab (d-1) (-b) (-a) x)
 
+--When you fill out the empty spaces and it results in a 5 row or more
 
+--
+--minimax :: Int -> Bool-> GameTree -> Int
+--minimax 0 max gt = case max of
+--                    True -> evaluate (game_board gt)  (game_turn gt) --maximum $ foldr(\pos acc -> evaluate (game_board gt)  (game_turn gt):acc) []  (next_moves gt)--foldr(\pos bv ->  bv `max` evaluate (game_board gt) (game_turn gt))         ((minBound :: Int)+1)  (next_moves gt)--maximum evaluate (game_board gt) $ other (game_turn gt) -- in trace (show (game_board gt) ++ " "++ show (game_turn gt) ++ " "++ show x ) x
+--                    False -> evaluate (game_board gt) (other $ game_turn gt)
+--minimax d True gt = if length (next_moves gt) == 0 then 1000000 else
+--                    foldr(\child x  -> x `max` (minimax (d-1) False child)) best_vale $ map snd (next_moves gt)
+--                   where best_vale = (minBound :: Int)+1
+--minimax d False gt = if length (next_moves gt) == 0 then -1000000 else
+--                    foldr(\child x -> x `min` (minimax (d-1) True child)) best_vale $ map snd (next_moves gt)
+--                   where best_vale = (maxBound :: Int)-1
 
 --minimax :: Int -> Bool-> GameTree -> Int
 --minimax 0 _ gt =  let x = evaluate (game_board gt) $  (game_turn gt) in trace (show (game_board gt) ++ " "++ show (game_turn gt) ++ " "++ show x ) x

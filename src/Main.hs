@@ -38,7 +38,7 @@ main = do   args <- getArgs
 
 parseArguments :: [String] -> Flags
 parseArguments args = foldl (\(Flags h w ) str -> case str of
-                                                  "-h" -> (Flags True w )
+                                                  "-h" -> (Flags True w ) --added
                                                   "-w" -> (Flags h True)
                                                   _    -> (Flags h w)) (Flags False False) args
 
