@@ -112,7 +112,7 @@ updateWorld :: Float -- ^ time since last update (you can ignore this)
             -> World -- ^ current world state
             -> World
 updateWorld t w = w
---                 | (turn w == h_player w) = let pd = (board w) in w{previous_board = pd}
+                  -- | (turn w == h_player w) = let pd = (board w) in w{previous_board = pd}
                  -- | (turn w == h_player2 w)
 --                 | otherwise = let move = getBestMove 3 $ buildTree generateMoves b col
 --                                          in case makeMove (board w) (other $ h_player w) move of

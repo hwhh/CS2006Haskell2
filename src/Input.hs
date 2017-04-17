@@ -17,7 +17,7 @@ fieldSize@(width, height) = (660, 480) :: (Float, Float)
 -- to stderr, which can be a very useful way of debugging!
 handleInput :: Event -> World -> World
 
-handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w =   case makeMove b col (f, s) of --if (turn w == h_player w) then
+handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w = case makeMove b col (f, s) of ----if (turn w == h_player w) then
                                                                           Just new_board -> case fst $ won new_board of
                                                                                  True -> trace ("Game won") w {board = new_board, turn = other col}
                                                                                  False ->w {board = new_board, turn = other col}
