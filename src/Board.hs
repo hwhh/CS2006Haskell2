@@ -468,7 +468,7 @@ data World = World { board :: Board,
                      }
  deriving Show
 
-initBoard = Board 6 3 [] (False, Nothing)
+initBoard = Board 6 4 [] (False, Nothing)
 
 
 makeWorld :: Flags -> IO World
@@ -555,29 +555,29 @@ checkPartialRow = undefined
 
 
 checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Col -> Bool
-checkWinnable b (x:xs) c  | length (x:xs) == s = let    next_x = take (target b) (x:xs)
-                                                        last = snd (snd ((x:xs) !! ((length next_x)))) in
-                                                    if max == [] then trace ("Here10  False"++ show next_x ++ "  "++show prev ++ "  "++show last) False
+checkWinnable b (x:xs) c
+--                                                    if maximum max /= (target b)
+--                                                        then trace ("Here11 Next "++ show next_x ++ "  "++show prev ++ "  "++show last) checkWinnable b xs c
+--                                                    if max == [] then trace ("Here10  False"++ show next_x ++ "  "++show prev ++ "  "++show last) False
+--
 
-                                                    else if maximum max /= (target b)
-                                                        then trace ("Here11 Next "++ show next_x ++ "  "++show prev ++ "  "++show last) checkWinnable b xs c
-                                                    else if empty == False && checkOpening c (Nothing, last) <= 1
-                                                        then trace ("Here13 True "++ show next_x ++ "  "++show prev ++ "  "++show last) False
-                                                    else
-                                                         trace ("Here14 Next "++ show next_x ++ "  "++show prev ++ "  "++show last ++" " ++show (next_x) ) checkWinnable b xs c
+--                                                    else if checkOpening c (Nothing, last) == 1 && empty == False
+--                                                        then trace ("Here13 True "++ show next_x ++ "  "++show prev ++ "  "++show last ++ " " ++ show empty ++"  "++ show (tt)) False
+--                                                    else
+--                                                         trace ("Here14 Next "++ show next_x ++ "  "++show prev ++ "  "++show last ++" " ++show (next_x) ) checkWinnable b xs c
 
                           | length xs == t =  if max == [] then trace ("Here1 False"++ show next_x ++ "  "++show prev ++ "  "++show max) False
                                              else if maximum max /= (target b)
                                                  then trace ("Here2 False "++ show next_x ++ "  "++show prev ++ "  "++show max ++ " " ++show xs)False
 
-                                             else if empty == False &&  checkOpening c (prev, Nothing) == 0
-                                                 then trace ("Here3 True "++ show next_x ++ "  "++show prev ++ "  "++show max++ " " ++show xs) False
+                                             else if checkOpening c (prev, Nothing) == 2
+                                                 then trace ("Here3 True "++ show next_x ++ "  "++show prev ++ "  "++show max++ " " ++show xs) True
                                              else
-                                                 trace ("Here5 False"++ show next_x ++ "  "++show prev ++ "  "++show max++ " " ++show xs) True
+                                                 trace ("Here5 False"++ show next_x ++ "  "++show prev ++ "  "++show max++ " " ++show xs) False
 
                           | otherwise      = let last = snd (snd ((xs) !! ((length next_x)))) in
                                              if  max == [] then trace ("Here5.5 F "++ show next_x ++ "  "++show prev ++ "  "++show max ++ "  "++show last ++ "  ") False
-                                             else if maximum max /= (target b)
+                                             else if maximum max < (target b)-1
                                                    then trace ("Here6 NEXT"++ show next_x ++ "  "++show prev ++ "  "++show max ++ "  "++show last ++ "  ") checkWinnable b xs c
 
                                              else if checkOpening c (prev, last) == 2
@@ -586,8 +586,9 @@ checkWinnable b (x:xs) c  | length (x:xs) == s = let    next_x = take (target b)
                                                   trace ("Here8 Next"++ show next_x ++ "  "++show prev ++ "  "++show max ++ "  "++show last ++ "  ")   checkWinnable b xs c
                           where next_x = take (target b) (xs)
                                 prev = snd (snd x)
-                                max  =  map fst $ sumList next_x c
-                                empty = False `elem` (map snd (sumList next_x c))
+                                tt = (sumList next_x c)
+                                max  =  map fst $ tt
+                                empty = False `notElem` map snd tt  -- if  contains a false then not empty
                                 t = (target b)
                                 s = (size b)+1
 
