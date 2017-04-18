@@ -434,7 +434,8 @@ type Direction = (Int, Int)
 data Board = Board { size :: Int,
                      target :: Int,
                      pieces :: [(Position, Col)],
-                     won :: (Bool, Maybe Col)
+                     won :: (Bool, Maybe Col),
+                     previous_board :: Board
                    }
   deriving Show
 
@@ -446,7 +447,9 @@ data Flags = Flags { hardAi :: Bool, -- HardAi           -h
 
 
 
-
+undo :: World -> World
+undo world = let pb = previous_board (board world)
+             in world { board = pb, turn = (other (turn world)) }
 -- Default board is 6x6, target is 3 in a row, no initial pieces
 
 -- Overall state is the board and whose turn it is, plus any further
@@ -462,13 +465,11 @@ data World = World { board :: Board,
                      game_over :: Bool,
                      h_player :: Col,
                      ai_level :: Int,
-                     last_move :: Maybe (Position, Col),
-                     previous_board :: Board
-
+                     last_move :: Maybe (Position, Col)
                      }
  deriving Show
 
-initBoard = Board 6 3 [] (False, Nothing)
+initBoard = Board 6 4 [] (False, Nothing) initBoard
 
 
 makeWorld :: Flags -> IO World
@@ -483,7 +484,8 @@ initWorld (Flags h w) board = World  board
                                      (if w then White else Black)
                                      (if h then 3 else 1)
                                      Nothing
-                                     board
+
+
 
 
 
@@ -497,12 +499,13 @@ makeMove b c p
                                             case elem p (map fst (pieces b)) of
                                                 True -> Nothing
                                                 False ->case checkWon (b {pieces =  ((p, c):pieces b)}) c of
-                                                            True -> trace (show score ++ " " ++ show c) Just (b {pieces =  ((p, c):pieces b), won=(True, Just c)})
-                                                            False -> trace (show score++ " " ++ show c) Just (b {pieces =  ((p, c):pieces b)})
+                                                            True -> trace (show score ++ " " ++ show c) Just (b {pieces =  ((p, c):pieces b), won=(True, Just c), previous_board=pd})
+                                                            False -> trace (show score++ " " ++ show c) Just (b {pieces =  ((p, c):pieces b), previous_board=pd})
             | otherwise = Nothing
 
             where s = (fromIntegral $ size b)+1
                   score = evaluate b c
+                  pd = b
 
 
 -- Check whether the board is in a winning state for either player.
@@ -543,35 +546,75 @@ sumList posses c =  tail $ scanl (\(a1, a2) (s,(p,col))  -> case col of
                                                 Nothing -> (a1+1, a2)
                       ) (0, True) posses
 
+
+
+
+--checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Col -> Bool
+--checkWinnable b (x:xs) c  | max == [] = False
+--                          | length xs <= t = if maximum max /= (target b)then False
+--                                             else if checkOpening c (prev, Nothing) == 2 then True
+--                                             else False
+--                          | otherwise      = let last = snd (snd ((xs) !! (length next_x))) in
+--                                             if maximum max < (target b) then checkWinnable b xs c
+--                                             else if checkOpening c (prev, last) == 2 then True
+--                                             else  checkWinnable b xs c
+--                          where next_x = take (target b) (xs)
+--                                prev = snd (snd x)
+--                                max  =  map fst $ sumList next_x c
+--                                t = (target b)
+--                                s = (size b)+1
+--
+--
+--getScore :: Board -> Col -> [(Position, Direction)] -> Int
+--getScore b c lines = foldl(\acc x -> let l = createLine b s (x:[])
+--                                         l' = checkLine b c l in
+--                                        case checkWinnable b l' c of
+--                                               True ->acc + (sum $ map fst $ filter (\(s,(p,col)) -> col == Just c)l')*100
+--                                               False -> acc
+--                                   ) 0 lines
+--                            where s = (size b)
+
 checkOpening :: Col-> (Maybe Col, Maybe Col) -> Int
 checkOpening col cols |cols == (Just col, Just col) = 0
                       |Just col == fst cols || Just col == snd cols=  1
                       |otherwise =  2
 
+checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Col -> Bool -> Bool
+checkWinnable b (x:xs) c valid | length (x:xs) <= (target b) = valid
+                               | otherwise = checkWinnable b xs c $ foldl(\acc (s,(p,col))  -> case col of
+                                                                           Just col -> if col == c && acc==True then acc else False
+                                                                           Nothing -> acc
+                                                                        ) True (take 5 (x:xs))
 
-checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Col -> Bool
-checkWinnable b (x:xs) c  | max == [] = False
-                          | length xs <= t = if maximum max /= (target b)then False
-                                             else if checkOpening c (prev, Nothing) == 2 then True
-                                             else False
-                          | otherwise      = let last = snd (snd ((xs) !! (length next_x))) in
-                                             if maximum max < (target b)-1 then checkWinnable b xs c
-                                             else if checkOpening c (prev, last) == 2 then True
-                                             else  checkWinnable b xs c
-                          where next_x = take (target b) (xs)
-                                prev = snd (snd x)
-                                max  =  map fst $ sumList next_x c
-                                t = (target b)
-                                s = (size b)+1
+
+
+                              --checkWinnable b xs c $ (foldl(\acc (s,(p,col)) -> case col of Just col -> if col == c then acc+1 else 0 Nothing -> acc+1) 0 (take 5 (x:xs))) >= (target b)
+
+
+--first =    case maximum max == (target b) of
+--                                                          False -> checkWinnable b xs c False False
+--                                                          True ->  if (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) ==1 then checkWinnable b xs c False False
+--                                                                   else checkWinnable b xs c False True
+--                                      | length (x:xs) <= (target b) =
+--                                                    case maximum max == (target b) || of
+--                                                          False -> checkWinnable b xs c False False
+--                                                          True ->  if (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) ==1 then checkWinnable b xs c False False
+--                                                                   else checkWinnable b xs c False True
+
+
+                                where next_x = take (target b) (x:xs)
+                                      max  =  map fst $ sumList next_x c
+
 
 
 getScore :: Board -> Col -> [(Position, Direction)] -> Int
-getScore b c lines = foldl(\acc x -> let l = createLine b s (x:[])
-                                         l' = checkLine b c l in
-                                        case checkWinnable b l' c of
-                                               True ->trace ("True "++ show c ++ " " ++show x) acc + (sum $ map fst $ filter (\(s,(p,col)) -> col == Just c)l')*100
-                                               False -> trace ("False "++ show c ++ " " ++show x) acc
-                                   ) 0 lines
+getScore b c lines = let yy = foldr(\x acc -> let l = reverse $ [(6,6),(5,6),(4,6),(3,6),(2,6),(1,6),(0,6)]
+                                                  l' = checkLine b c l
+                                                  p = checkWinnable b l' c False in
+                                                  if p then True-- acc + (sum $ map fst $ filter (\(s,(p,col)) -> col == Just c)l')
+                                                       else False--acc
+                                   ) False lines in trace (show yy ++" " ++show c) 10
+
                             where s = (size b)
 
 getPlayersScore :: Board -> Col -> Int

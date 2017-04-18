@@ -16,7 +16,7 @@ fieldSize@(width, height) = (660, 480) :: (Float, Float)
 
 
 drawWorld :: World -> Picture
-drawWorld w |  False    = translate (-330.0) 0.0 (text ((show $ fromJust $ snd game_won)++" Wins" )) --fst game_won
+drawWorld w |  False    = translate (-330.0) 0.0 (text ((show $ fromJust $ snd game_won)++" Wins" )) --fst game_wonn
             | otherwise = pictures(drawGrid(b):drawPices(b):[])
                    where b = board w
                          game_won = won b

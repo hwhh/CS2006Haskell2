@@ -29,7 +29,8 @@ handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w = case makeMove b 
 handleInput (EventKey (Char k) Down _ _) w
     = case k of
            'n' -> w{board = initBoard, turn=Black}
-
+           'u' -> undo w
+           _ -> w
 handleInput (EventKey (Char k) Up _ _) b
     = trace ("Key " ++ show k ++ " up") b
 handleInput e b = b
