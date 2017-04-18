@@ -67,7 +67,7 @@ data World = World { board :: Board,
                      }
  deriving Show
 
-initBoard = Board 6 4 [] (False, Nothing) (Just initBoard)
+initBoard = Board 15 5 [] (False, Nothing) (Just initBoard)
 
 
 makeWorld :: Flags -> IO World
@@ -100,8 +100,8 @@ makeMove b c p
                                             case elem p (map fst (pieces b)) of
                                                 True -> Nothing
                                                 False ->case checkWon (b {pieces =  ((p, c):pieces b)}) c of
-                                                            True -> trace (show score ++ " " ++ show c) Just (b {pieces =  ((p, c):pieces b), won=(True, Just c), previous_board=Just pd})
-                                                            False -> trace (show score ++ " " ++ show c) Just (b {pieces =  ((p, c):pieces b), previous_board=Just pd})
+                                                            True -> Just (b {pieces =  ((p, c):pieces b), won=(True, Just c), previous_board=Just pd})
+                                                            False ->Just (b {pieces =  ((p, c):pieces b), previous_board=Just pd})
             | otherwise = Nothing
 
             where s = (fromIntegral $ size b)+1
@@ -126,7 +126,7 @@ For every position ((x, y), col) in the 'pieces' list:
 
 checkWon :: Board -> Col -> Bool
 checkWon b c = if checkLines b c (target b) combinations == 1 then True else False
-              where combinations = createLines b -- [(x, y) | x <-  map (fst) (filter ((==c).snd) (pieces b)), y <- dirs]
+              where combinations = createLines b
 
 
 checkLines :: Board -> Col -> Int -> [(Position, Direction)] -> Int
@@ -141,11 +141,11 @@ checkLine b c pos  = tail $ scanl (\(s,(p,col)) (x,y)  ->  if ((x,y),c) `elem` (
                                                               else (0, ((x,y), Nothing))
                                ) (0, ((pos!!0), Nothing))  pos
 
-sumList ::[(Int, (Position, Maybe Col))] -> Col -> [(Int, Bool)]
+sumList ::[(Int, (Position, Maybe Col))] -> Col -> [(Int, Maybe Col)]
 sumList posses c =  tail $ scanl (\(a1, a2) (s,(p,col))  -> case col of
-                                                Just col -> if col == c then (a1+1, False) else (0, False)
-                                                Nothing -> (a1+1, a2)
-                      ) (0, True) posses
+                                                Just col -> if col == c then (a1+1, Just col) else (0, Just (other col))
+                                                Nothing -> (a1+1, Nothing)
+                      ) (0, Nothing) posses
 
 
 
@@ -155,15 +155,15 @@ checkOpening col cols |cols == (Just col, Just col) = 0
                       |otherwise =  2
 
 checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Bool
-checkWinnable b (x:xs) prev c first  |first                       =  case maximum max == (target b) of
+checkWinnable b (x:xs) prev c first   |length (x:xs) <= (target b) = case maximum max == (target b) of
+                                                                           False -> False
+                                                                           True ->  if (checkOpening c (prev, Nothing)) ==2 then True
+                                                                                    else False
+                                      |first                       =  case maximum max == (target b) of
                                                                           False -> checkWinnable b xs (snd (snd (x))) c False
                                                                           True ->  if  (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2 then True
                                                                                    else checkWinnable b xs (snd (snd (x))) c False
-                                      |length (x:xs) <= (target b) = case maximum max == (target b) of
-                                                                          False -> False
-                                                                          True ->  if (checkOpening c (prev, Nothing)) ==2 then True
-                                                                                   else False
-                                       |otherwise                  = case maximum max == (target b) of
+                                      |otherwise                   = case maximum max == (target b) of
                                                                          False -> checkWinnable b xs (snd (snd (x))) c False
                                                                          True ->  if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2 then True
                                                                                   else  checkWinnable b xs (snd (snd (x))) c False
@@ -173,10 +173,12 @@ checkWinnable b (x:xs) prev c first  |first                       =  case maximu
 
 getScore :: Board -> Col -> [(Position, Direction)] -> Int
 getScore b c lines = foldl(\acc x -> let l = createLine b s (x:[])
-                                         l' = checkLine b c l in
+                                         l' = checkLine b c l  in
                                         case checkWinnable b l' Nothing c True of
-                                               True ->trace ("True "++ show c ++ " " ++show x) acc + (sum $ map fst $ filter (\(s,(p,col)) -> col == Just c)l')*100
-                                               False -> trace ("False "++ show c ++ " " ++show x) acc
+                                               True -> let max = sumList l' c in
+                                                            if maximum (map fst max) >= (target b) && Just c `elem` map snd max then acc+maximum (map fst max)*100
+                                                            else acc + (sum $ map fst $ filter (\(s,(p,col)) -> col == Just c)l')*50
+                                               False -> acc-50
                                    ) 0 lines
                             where s = (size b)
 
@@ -184,12 +186,11 @@ getPlayersScore :: Board -> Col -> Int
 getPlayersScore b col = getScore b col (createLines b)
 
 
-
 evaluate :: Board -> Col -> Int
-evaluate b col = (getPlayersScore b col) -  (getPlayersScore b other_col)
+evaluate b col = if fst (won b) && snd (won b) == Just col then 100000000
+                 else if fst (won b) && snd (won b) == Just (other col) then -100000000
+                 else (getPlayersScore b col) -  (getPlayersScore b other_col)
                    where other_col = other col
-
-
 
 createLines ::Board -> [(Position, Direction)]
 createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
@@ -207,6 +208,45 @@ createLine b n (p:pos) = createLine b (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
                              d2 = snd (snd p)
                              p1 = fst (fst p)
                              p2 = snd (fst p)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Bool
+--checkWinnable b (x:xs) prev c first   |length (x:xs) <= (target b) = case maximum max == (target b) of
+--                                                                     False -> trace ("Here5  "++ show next_x ++ "  "++show prev ++ "  "++show max ++ " " ++show xs) False
+--                                                                     True ->  if (checkOpening c (prev, Nothing)) ==2 then trace ("Here4 False "++ show next_x ++ "  "++show prev ++ "  "++show max ++ " " ++show xs) True
+--                                                                              else trace ("Here6  "++ show next_x ++ "  "++show prev ++ "  "++show max ++ " " ++show xs)  False
+--                                      |first =  case maximum max == (target b) of
+--                                                          False -> trace ("Here1 "++ show next_x ++ "  "++show (snd (snd ((x:xs) !! (length next_x)))) ++ "  "++show max ++ " " ++show xs) checkWinnable b xs (snd (snd (x))) c False
+--                                                          True ->  if  (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2 then trace ("Here2 "++ show next_x ++ "  "++show (snd (snd ((x:xs) !! (length next_x)))) ++ "  "++show max ++ " " ++show xs)True
+--                                                                   else trace ("Here3 False "++ show next_x ++ "  "++show (snd (snd ((x:xs) !! (length next_x)))) ++ "  "++show max ++ " " ++show xs) checkWinnable b xs (snd (snd (x))) c False
+--                                      |otherwise  = case maximum max == (target b) of
+--                                                         False -> trace ("Here7" ) checkWinnable b xs (snd (snd (x))) c False
+--                                                         True ->  if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2 then trace ("Here8  ") True -- ++ show next_x ++ "  "++show prev ++ "  "++show max ++ " " ++show xs ++ "  "++show (snd (snd ((x:xs) !! (length next_x))))
+--                                                                  else trace ("Here9  ") checkWinnable b xs (snd (snd (x))) c False -- ++ show next_x ++ "  "++show prev ++ "  "++show max ++ " " ++show xs ++ "  "++show (snd (snd ((x:xs) !! (length next_x))))
+--                                where next_x = take (target b) (x:xs)
+--                                      max  =  map fst $ sumList next_x c
+
+
+
+
 
 
 --

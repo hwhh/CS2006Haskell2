@@ -26,20 +26,23 @@ import AI
 
 main :: IO ()
 main = do   args <- getArgs
-            let flags = parseArguments args
+            pictures <- getBoard
+            let flags = getArguments args
             initWorld <- makeWorld flags
-            putStrLn "The arguments are:"
-            playIO (InWindow "Gomoku" (740, 580) (10, 10)) white 10
+            playIO (InWindow "Gomoku" (820, 820) (10, 10)) white 10
                 initWorld -- in Board.hs
-                drawWorld -- in Draw.hs
+                (drawWorld pictures)-- in Draw.hs
                 handleInput -- in Input.hs
                 updateWorld -- in AI.hs
 
-
-parseArguments :: [String] -> Flags
-parseArguments args = foldl (\(Flags h w ) str -> case str of
+getArguments :: [String] -> Flags
+getArguments args = foldl (\(Flags h w ) str -> case str of
                                                   "-h" -> (Flags True w ) --added
                                                   "-w" -> (Flags h True)
                                                   _    -> (Flags h w)) (Flags False False) args
 
-
+getBoard :: IO [Picture]
+getBoard = do board <- loadBMP "./Pictures/b.bmp"; return board
+              white <- loadBMP "./Pictures/w1o.bmp"
+              black <- loadBMP "./Pictures/b1o.bmp"
+              return [board, white, black]
