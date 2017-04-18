@@ -17,7 +17,7 @@ fieldSize@(width, height) = (660, 480) :: (Float, Float)
 -- to stderr, which can be a very useful way of debugging!
 handleInput :: Event -> World -> World
 
-handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w = case makeMove b col (f, s) of ----if (turn w == h_player w) then
+handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w = case makeMove b col (f, s) of ---- if (turn w == h_player w) then
                                                                           Just new_board -> case fst $ won new_board of
                                                                                  True -> trace ("Game won") w {board = new_board, turn = other col}
                                                                                  False ->w {board = new_board, turn = other col}
@@ -26,10 +26,9 @@ handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w = case makeMove b 
                                                                  where b = board w
                                                                        col = turn w
                                                                        (f,s) = screenToCell b x y
-handleInput (EventKey (Char k) Down _ _) b
-    = trace ("Key " ++ show k ++ " down") b
-
-
+handleInput (EventKey (Char k) Down _ _) w
+    = case k of
+           'n' -> w{board = initBoard, turn=Black}
 
 handleInput (EventKey (Char k) Up _ _) b
     = trace ("Key " ++ show k ++ " up") b
