@@ -4,6 +4,11 @@ import Graphics.Gloss.Interface.Pure.Game
 import Graphics.Gloss
 import Board
 import AI
+import SaveLoad
+import Data.Binary
+import Data.ByteString.Lazy as B
+
+
 
 import Debug.Trace
 
@@ -15,25 +20,28 @@ fieldSize@(width, height) = (660, 480) :: (Float, Float)
 -- trace :: String -> a -> a
 -- 'trace' returns its second argument while printing its first argument
 -- to stderr, which can be a very useful way of debugging!
-handleInput :: Event -> World -> World
+handleInput :: Event -> World -> IO World
 
-handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w = case makeMove b col (f, s) of ---- if (turn w == h_player w) then
+handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w =  if (turn w == h_player w) then case makeMove b col (f, s) of ----
                                                                           Just new_board -> case fst $ won new_board of
-                                                                                 True -> trace ("Game won") w {board = new_board, turn = other col}
-                                                                                 False ->w {board = new_board, turn = other col}
-                                                                          Nothing -> trace ("f,s: " ++ show (f,s) ++"x,y: " ++ show (x, y)) w -- show hint right click ?
-                                                                 --else w
+                                                                                 True -> return $ w {board = new_board, turn = other col}
+                                                                                 False ->return $ w {board = new_board, turn = other col}
+                                                                          Nothing -> return w -- show hint right click ?
+                                                                 else return w
                                                                  where b = board w
                                                                        col = turn w
                                                                        (f,s) = screenToCell b x y
 handleInput (EventKey (Char k) Down _ _) w
     = case k of
-           'n' -> w{board = initBoard, turn=Black}
+           'n' -> return $ w{board = initBoard, turn=Black}
            'u' -> undo w
-           _ -> w
-handleInput (EventKey (Char k) Up _ _) b
-    = trace ("Key " ++ show k ++ " up") b
-handleInput e b = b
+           's' -> do (trace("Saving game") B.writeFile "SaveFile.dat" (encode w)); return w
+           'l' -> do file <- B.readFile "SaveFile.dat"; return $ (trace("Loading game") decode file)
+           _ -> return w
+
+handleInput (EventKey (Char k) Up _ _) w
+    = trace ("Key " ++ show k ++ " up") return w
+handleInput e w = return w
 
 
 screenToCell :: Board -> Float -> Float -> Position

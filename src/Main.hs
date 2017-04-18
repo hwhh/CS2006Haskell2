@@ -29,7 +29,7 @@ main = do   args <- getArgs
             let flags = parseArguments args
             initWorld <- makeWorld flags
             putStrLn "The arguments are:"
-            play (InWindow "Gomoku" (740, 580) (10, 10)) white 10
+            playIO (InWindow "Gomoku" (740, 580) (10, 10)) white 10
                 initWorld -- in Board.hs
                 drawWorld -- in Draw.hs
                 handleInput -- in Input.hs
