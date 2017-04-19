@@ -49,7 +49,7 @@ handleInput (EventKey (Char k) Up _ _) w
 
 handleInput e w = return w
 
-
+-- | Converts a screen click to a cell
 screenToCell :: Board -> Float -> Float -> Position
 screenToCell b x y =(round((x / (width/ (s*2)) + s) / 2),  round (((-y)/ (height/ (s*2)) + s) /2))
             where s = fromIntegral $ size b

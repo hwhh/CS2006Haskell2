@@ -26,8 +26,8 @@ import AI
 
 main :: IO ()
 main = do   args <- getArgs
-            pictures <- getBoard
-            let flags = getArguments args
+            pictures <- getPictures
+            let flags = getSetting args
             initWorld <- makeWorld flags
             playIO (InWindow "Gomoku" (820, 820) (10, 10)) white 10
                 initWorld -- in Board.hs
@@ -35,15 +35,16 @@ main = do   args <- getArgs
                 handleInput -- in Input.hs
                 updateWorld -- in AI.hs
 
-getArguments :: [String] -> Flags
-getArguments args = foldl (\(Flags h w ) str -> case str of
+-- | Gets the program arguments
+getSetting :: [String] -> Flags
+getSetting args = foldl (\(Flags h w ) str -> case str of
                                                   "-h" -> (Flags True w ) --added
                                                   "-w" -> (Flags h True)
                                                   _    -> (Flags h w)) (Flags False False) args
-
-getBoard :: IO [Picture]
-getBoard = do board <- loadBMP "./Pictures/b.bmp"; return board
-              white <- loadBMP "./Pictures/w1o.bmp"
-              black <- loadBMP "./Pictures/b1o.bmp"
-              hint <- loadBMP "./Pictures/hint.bmp"
-              return [board, white, black, hint]
+-- | Loads the pictures
+getPictures :: IO [Picture]
+getPictures = do  board <- loadBMP "./Pictures/b.bmp"; return board
+                  white <- loadBMP "./Pictures/w1o.bmp"
+                  black <- loadBMP "./Pictures/b1o.bmp"
+                  hint <- loadBMP "./Pictures/hint.bmp"
+                  return [board, white, black, hint]

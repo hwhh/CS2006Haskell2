@@ -2,6 +2,10 @@ module SaveLoad where
 import Board
 import Data.Binary
 
+{-
+Encodes / Decodes all of the data types in to binary
+-}
+
 instance Binary World where
    put (World b c h go hp ai lm) =  do put b
                                        put c

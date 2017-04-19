@@ -42,10 +42,10 @@ data Flags = Flags { hardAi :: Bool, -- HardAi           -h
  deriving Show
 
 
-
+-- | Undoes the last move
 undo :: World -> IO World
 undo world = let pb = previous_board (board world)
-             in case pb of
+             in case pb of -- ^Checks theres a previous world
                     Just b -> return $ world { board = fromJust pb, turn = (other (turn world)) }
                     Nothing -> return $ world
 -- Default board is 6x6, target is 3 in a row, no initial pieces
@@ -67,13 +67,13 @@ data World = World { board :: Board,
                      }
  deriving Show
 
-initBoard = Board 6 4 [] (False, Nothing) (Just initBoard)
+initBoard = Board 15 5 [] (False, Nothing) (Just initBoard)
 
-
+-- | Creates an IO World
 makeWorld :: Flags -> IO World
 makeWorld (Flags h w) = do return(initWorld (Flags h w) initBoard)
 
-
+-- | Creates the inital world
 initWorld :: Flags -> Board -> World
 initWorld (Flags h w) board = World  board
                                      Black
@@ -86,6 +86,7 @@ initWorld (Flags h w) board = World  board
 -- Play a move on the board; return 'Nothing' if the move is invalid
 -- (e.g. outside the range of the board, or there is a piece already there)
 
+-- | Generares a random tuple
 getRandomTuple :: Int -> IO (Int,Int)
 getRandomTuple size = do
        randomX <- randomRIO (1, size-1)
@@ -93,10 +94,11 @@ getRandomTuple size = do
        return (randomX, randomY)
 
 
+-- | Makes a move on the board
 makeMove :: Board -> Col -> Position -> Maybe Board
 makeMove b c p
-            | fst (won b) = Nothing
-            | fst p  < s && snd p < s  && fst p  > -1 && snd p > -1 =
+            | fst (won b) = Nothing -- ^ Checks in game is over
+            | fst p  < s && snd p < s  && fst p  > -1 && snd p > -1 =  -- ^Checks pieces in on the board
                                             case elem p (map fst (pieces b)) of
                                                 True -> Nothing
                                                 False ->case checkWon (b {pieces =  ((p, c):pieces b)}) c of
@@ -124,23 +126,27 @@ For every position ((x, y), col) in the 'pieces' list:
 - if n > 1, move one step in direction D, and check for a line of n-1 in a row.
 -}
 
+-- | Checks if the game has been won
 checkWon :: Board -> Col -> Bool
 checkWon b c = if checkLines b c (target b) combinations == 1 then True else False
               where combinations = createLines b
 
 
+-- | checks all the lines in every directions
 checkLines :: Board -> Col -> Int -> [(Position, Direction)] -> Int
 checkLines _ _ _ [] = 0
 checkLines b c target (x:xs) | maximum (map fst (checkLine b c (createLine b s (x:[])))) == target = 1
                              | otherwise = checkLines b c target xs
                              where s = (size b)
 
+-- | Calculates the total number of adjacent cells
 checkLine :: Board -> Col -> [Position] -> [(Int, (Position, Maybe Col))]
 checkLine b c pos  = tail $ scanl (\(s,(p,col)) (x,y)  ->  if ((x,y),c) `elem` (pieces b) then (s+1, ((x,y), Just c))
                                                               else if ( ((x,y),(other c)) `elem` (pieces b) ) then (0, ((x,y), Just (other c)))
                                                               else (0, ((x,y), Nothing))
-                               ) (0, ((pos!!0), Nothing))  pos
+                               ) (0, ((pos!!0), Nothing)) pos
 
+-- | Calculates the number of adjacent cells  that are free or occupied by a colour
 sumList ::[(Int, (Position, Maybe Col))] -> Col -> [(Int, Maybe Col)]
 sumList posses c =  tail $ scanl (\(a1, a2) (s,(p,col))  -> case col of
                                                 Just col -> if col == c then (a1+1, Just col) else (0, Just (other col))
@@ -148,76 +154,52 @@ sumList posses c =  tail $ scanl (\(a1, a2) (s,(p,col))  -> case col of
                       ) (0, Nothing) posses
 
 
-
+-- | check wether there are adjacent cells
 checkOpening :: Col-> (Maybe Col, Maybe Col) -> Int
 checkOpening col cols |cols == (Just col, Just col) = 0
                       |Just col == fst cols || Just col == snd cols=  1
                       |otherwise =  2
 
+-- | checks if player can win with exactly x in a row
 checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Bool
-checkWinnable b (x:xs) prev c first   |length (x:xs) <= (target b) = case maximum max == (target b) of
+checkWinnable b (x:xs) prev c first   |length (x:xs) <= (target b) = case maximum max == (target b) of  -- ^ checks if n free slots in a row
                                                                            False -> False
-                                                                           True ->  if (checkOpening c (prev, Nothing)) ==2 then True
+                                                                           True ->  if (checkOpening c (prev, Nothing)) ==2 then True -- ^ Checks the opeings by getting the previous and the next cells
                                                                                     else False
-                                      |first                       =  case maximum max == (target b) of
+                                      |first                       =  case maximum max == (target b) of -- ^ checks if n free slots in a row
                                                                           False -> checkWinnable b xs (snd (snd (x))) c False
-                                                                          True ->  if  (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2 then True
+                                                                          True ->  if  (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2 then True -- ^ Checks the opeings by getting the previous and the next cells
                                                                                    else checkWinnable b xs (snd (snd (x))) c False
                                       |otherwise                   = case maximum max == (target b) of
                                                                          False -> checkWinnable b xs (snd (snd (x))) c False
-                                                                         True ->  if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2 then True
+                                                                         True ->  if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2 then True -- ^ Checks the opeings by getting the previous and the next cells
                                                                                   else  checkWinnable b xs (snd (snd (x))) c False
                                 where next_x = take (target b) (x:xs)
                                       max  =  map fst $ sumList next_x c
 
-
+-- | Calculates the score based on how many in a row and if the row is winnable
 getScore :: Board -> Col -> [(Position, Direction)] -> Int
-getScore b c lines = foldl(\acc x -> let l = createLine b s (x:[])
-                                         l' = checkLine b c l  in
+getScore b c lines = foldl(\acc x -> let l = createLine b s (x:[]) -- ^ Creates the line
+                                         l' = checkLine b c l  in -- ^ Analayses the line
                                         case checkWinnable b l' Nothing c True of
                                                True -> let max = sumList l' c in
-                                                            if maximum (map fst max) >= (target b) && Just c `elem` map snd max then acc+maximum (map fst max)*100
-                                                            else acc + (sum $ map fst $ filter (\(s,(p,col)) -> col == Just c)l')*50
-                                               False -> acc-50
+                                                            if maximum (map fst max) >= (target b) && Just c `elem` map snd max then acc+maximum (map fst max) -- ^ Gets the maximum number of adjacent solts that can be filled by colour
+                                                            else acc + (sum $ map fst $ filter (\(s,(p,col)) -> col == Just c)l') -- ^ Sums the number of adjacent pices for colour
+                                               False -> acc
                                    ) 0 lines
                             where s = (size b)
-
+-- | Gets a score for a player
 getPlayersScore :: Board -> Col -> Int
 getPlayersScore b col = getScore b col (createLines b)
 
 
-score :: Board -> Col -> [(Position, Direction)] ->Int
-score b col combinations = foldl(\acc (p,d) ->  if checkPosition b p d col 4 == True then acc+100
-                                                else if checkPosition b p d col 3 == True then acc+50
-                                                else if checkPosition b p d col 2 == True then acc+20
-                                                else if checkPosition b p d col 1 == True then acc+10
-                                                else acc
-                               ) 0 combinations
-
-
+-- | Evalutes the board for a given player
 evaluate :: Board -> Col -> Int
-evaluate b col = if fst (won b) && snd (won b) == Just col then 100000000
-                 else if fst (won b) && snd (won b) == Just (other col) then -100000000
-                 else (score b col combs)-(score b (other col) combs)
-               where combs = [(x, y) | x <-  map fst (filter ((==col).snd) (pieces b)), y <- dirs]  --(getScore b col (createLines b) -  (getScore b col (createLines b))
+evaluate b col = if fst (won b) && snd (won b) == Just col then (maxBound :: Int) -- ^ Checks if won or loss
+                 else if fst (won b) && snd (won b) == Just (other col) then (minBound :: Int)-- ^ Checks if won or loss
+                 else (getPlayersScore b col)-(getPlayersScore b (other col))
 
-
-checkPosition :: Board -> Position -> Direction -> Col -> Int -> Bool
-checkPosition b p d c 0 | p `notElem` map (fst) (pieces b) && onBoard p = True
-                        | otherwise = False
-checkPosition b p d c n | p `notElem` map (fst) (filter ((==c).snd) (pieces b)) = False
-                        | otherwise = checkPosition b (fst p + fst d, snd p + snd d) d c (n-1)
-
-onBoard :: Position -> Bool
-onBoard p = if (fst p >= 0 && fst p < 6) && (snd p >= 0 && snd p < 6) then True else False
-
-
---evaluate :: Board -> Col -> Int
---evaluate b col = if fst (won b) && snd (won b) == Just col then 100000000
---                 else if fst (won b) && snd (won b) == Just (other col) then -100000000
---                 else (getPlayersScore b col) -  (getPlayersScore b other_col)
---                   where other_col = other col
-
+-- | Genereates the first cell and a direction for every line > target on the board
 createLines ::Board -> [(Position, Direction)]
 createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
                 zip (zip (repeat 0) [0..s]) (repeat (1,0)) ++ --W && E
@@ -226,6 +208,8 @@ createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
                where s = size b
                      l = s - (target b)
 
+
+-- | Given a position and direction generate the whole line
 createLine :: Board -> Int -> [(Position, Direction)] -> [Position]
 createLine b 0 pos     = filter (\(x,y) -> (x<=s && x>=0) && (y<=s && y>=0)) $ map fst pos
                        where s = fromIntegral (size b)
