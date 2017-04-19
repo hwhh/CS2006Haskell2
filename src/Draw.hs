@@ -4,8 +4,10 @@ import Data.Maybe
 import Graphics.Gloss
 import Graphics.Gloss.Game
 import Graphics.Gloss.Juicy
-
+import AI
 import Board
+import Debug.Trace
+
 
 
 fieldSize@(width, height) = (720, 720) :: (Float, Float)
@@ -19,14 +21,16 @@ fieldSize@(width, height) = (720, 720) :: (Float, Float)
 --65, 65
 
 drawWorld :: [Picture] -> World -> IO Picture
-drawWorld p w|  fst (won(board w))   = return $ translate (-330.0) 0.0 (text ((show $ fromJust $ snd game_won)++" Wins" )) --
-             | otherwise = return $ pictures((p!!0):drawGrid(b):drawPices b p :[])
+drawWorld p w| fst (won(board w))   = return $  let message = translate (-330.0) 0.0 (text ((show $ fromJust $ snd game_won)++" Wins" )) in pictures((p!!0):drawGrid(b):drawPices b p:message:[])
+             | otherwise = case (hints w) of
+                                True ->   return $ pictures((p!!0):drawGrid(b):drawPices b p:(drawHints (board w) (turn w) p):[])
+                                False ->  return $ pictures((p!!0):drawGrid(b):drawPices b p :[])
                    where b = board w
                          game_won = won b
 
 
-drawGrid :: Board -> Picture --110, 80
-drawGrid b =pictures[uncurry translate (cellToScreen b x y (24, 24)) $ color white $ rectangleWire (width/(fromIntegral s))  (height/(fromIntegral s)) | x <- [0 .. s-1], y <- [0 ..s-1]]
+drawGrid :: Board -> Picture --110, 80, 24, 24, 55, 40
+drawGrid b =pictures[uncurry translate (cellToScreen b x y (55, 40)) $ color white $ rectangleWire (width/(fromIntegral s))  (height/(fromIntegral s)) | x <- [0 .. s-1], y <- [0 ..s-1]]
                     where s = (size b)
 
 drawPNG ::  Col -> Picture
@@ -42,6 +46,11 @@ drawPices b p = pictures(foldr (\((f, s), c) acc ->
                             (uncurry translate (cellToScreen b f s (0,0)) (p!!1)) : acc
                         )
                 [] $ pieces b)
+
+drawHints :: Board -> Col -> [Picture] -> Picture
+drawHints b c p = pictures (foldl (\acc (f, s) -> (uncurry translate (cellToScreen b f s (0,0)) (p!!3)) : acc ) [] moves)
+                   where moves = (getBestMoves b c (getAllMoves b))
+
 
 cellToScreen :: Board -> Int -> Int -> (Float, Float)->(Float, Float)
 cellToScreen b x y (x_offset, y_offset)= (x_start + ((fromIntegral x) * (width / fromIntegral (size b)) + x_offset), y_start - ((fromIntegral y) * (height / fromIntegral (size b))) -y_offset)

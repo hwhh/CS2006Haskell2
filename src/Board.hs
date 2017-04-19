@@ -67,7 +67,7 @@ data World = World { board :: Board,
                      }
  deriving Show
 
-initBoard = Board 15 5 [] (False, Nothing) (Just initBoard)
+initBoard = Board 6 4 [] (False, Nothing) (Just initBoard)
 
 
 makeWorld :: Flags -> IO World
@@ -186,11 +186,37 @@ getPlayersScore :: Board -> Col -> Int
 getPlayersScore b col = getScore b col (createLines b)
 
 
+score :: Board -> Col -> [(Position, Direction)] ->Int
+score b col combinations = foldl(\acc (p,d) ->  if checkPosition b p d col 4 == True then acc+100
+                                                else if checkPosition b p d col 3 == True then acc+50
+                                                else if checkPosition b p d col 2 == True then acc+20
+                                                else if checkPosition b p d col 1 == True then acc+10
+                                                else acc
+                               ) 0 combinations
+
+
 evaluate :: Board -> Col -> Int
 evaluate b col = if fst (won b) && snd (won b) == Just col then 100000000
                  else if fst (won b) && snd (won b) == Just (other col) then -100000000
-                 else (getPlayersScore b col) -  (getPlayersScore b other_col)
-                   where other_col = other col
+                 else (score b col combs)-(score b (other col) combs)
+               where combs = [(x, y) | x <-  map fst (filter ((==col).snd) (pieces b)), y <- dirs]  --(getScore b col (createLines b) -  (getScore b col (createLines b))
+
+
+checkPosition :: Board -> Position -> Direction -> Col -> Int -> Bool
+checkPosition b p d c 0 | p `notElem` map (fst) (pieces b) && onBoard p = True
+                        | otherwise = False
+checkPosition b p d c n | p `notElem` map (fst) (filter ((==c).snd) (pieces b)) = False
+                        | otherwise = checkPosition b (fst p + fst d, snd p + snd d) d c (n-1)
+
+onBoard :: Position -> Bool
+onBoard p = if (fst p >= 0 && fst p < 6) && (snd p >= 0 && snd p < 6) then True else False
+
+
+--evaluate :: Board -> Col -> Int
+--evaluate b col = if fst (won b) && snd (won b) == Just col then 100000000
+--                 else if fst (won b) && snd (won b) == Just (other col) then -100000000
+--                 else (getPlayersScore b col) -  (getPlayersScore b other_col)
+--                   where other_col = other col
 
 createLines ::Board -> [(Position, Direction)]
 createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S

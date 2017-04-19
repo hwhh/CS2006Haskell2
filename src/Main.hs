@@ -45,4 +45,5 @@ getBoard :: IO [Picture]
 getBoard = do board <- loadBMP "./Pictures/b.bmp"; return board
               white <- loadBMP "./Pictures/w1o.bmp"
               black <- loadBMP "./Pictures/b1o.bmp"
-              return [board, white, black]
+              hint <- loadBMP "./Pictures/hint.bmp"
+              return [board, white, black, hint]

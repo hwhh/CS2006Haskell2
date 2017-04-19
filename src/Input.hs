@@ -7,7 +7,7 @@ import AI
 import SaveLoad
 import Data.Binary
 import Data.ByteString.Lazy as B
-
+import Draw
 
 
 import Debug.Trace
@@ -38,10 +38,15 @@ handleInput (EventKey (Char k) Down _ _) w
            'u' -> undo w
            's' -> do (trace("Saving game") B.writeFile "SaveFile.dat" (encode w)); return w
            'l' -> do file <- B.readFile "SaveFile.dat"; return $ (trace("Loading game") decode file)
+           'h' -> do trace ("hints") return $ w{hints = True}
            _ -> return w
 
 handleInput (EventKey (Char k) Up _ _) w
-    = trace ("Key " ++ show k ++ " up") return w
+    = case k of
+        'h' -> do trace ("no hints") return $ w{hints = False}
+        _ -> return w
+
+
 handleInput e w = return w
 
 
