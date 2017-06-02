@@ -22,9 +22,9 @@ data GameTree = GameTree { game_board :: Board,
 -- Rather than generating every possible move (which would result in an
 -- unmanageably large game tree!) it could, for example, generate moves
 -- according to various simpler strategies.
-buildTree :: (Board -> Col -> [Position]) -- ^ Move generator
-             -> Board -- ^ board state
-             -> Col -- ^ player to play next
+buildTree :: (Board -> Col -> [Position]) --  Move generator
+             -> Board --  board state
+             -> Col --  player to play next
              -> GameTree
 
 buildTree gen b c = let moves = gen b c in -- generated moves
@@ -47,43 +47,62 @@ buildTree gen b c = let moves = gen b c in -- generated moves
 -- is at the top of the game tree.
 
 
--- | MiniMax algorithm
-minimax :: Int -> Bool-> GameTree -> Int
-minimax 0 max gt = case max of -- ^ When depth of 0 evalute board
-                    True -> evaluate (game_board gt) $ other (game_turn gt)
-                    False -> evaluate (game_board gt) (game_turn gt)
-minimax d True gt =  if length (next_moves gt) == 0 -- ^ If maximising player get best score
-                         then (maxBound::Int) -- ^ found winning tree
-                     else maximum $ foldl (\acc moves -> (minimax (d-1) False (snd moves)):acc) [] (next_moves gt)
-minimax d False gt = if length (next_moves gt) == 0 -- ^ If minimising player get worst score
-                         then (minBound::Int)-- ^ found lossing tree
-                     else minimum $ foldl (\acc moves -> (minimax (d-1) True (snd moves)):acc) [] (next_moves gt)
 
-
--- | Minimax with alpha beta pruning;  not fully fuctional
+--
+-- |Minimax with alpha beta pruning;  not fully fuctional
 minimax_ab :: Int -> Int -> Int ->GameTree -> Int
 minimax_ab 0 a b  gt = evaluate (game_board gt) (other (game_turn gt))-- If depth of 0 return evalution
 minimax_ab d a b  gt | length (next_moves gt) == 0  = (maxBound :: Int)
-                     | otherwise = cmx a (map snd (next_moves gt)) -- ^ Else prune the tree
+                     | otherwise = cmx a (map snd (next_moves gt)) --  Else prune the tree
                     where cmx a []  = a
                           cmx a (x:xs) | a'>=b     = a'
                                       | otherwise = cmx a' xs
                                      where a' = -(minimax_ab (d-1) (-b) (-a)  x)
 
-getBestMove :: Int -- ^ Maximum search depth
-               -> GameTree -- ^ Initial game tree
+
+-- |MiniMax algorithm
+minimax :: Int -> Bool-> GameTree -> Int
+minimax 0 max gt = case max of -- When depth of 0 evalute board
+                    True -> let x = evaluate (game_board gt)  (game_turn gt) in trace (show (pieces $ game_board gt) ++ " "++ show x ++ " " ++ show (game_turn gt)) x;
+                    False -> let x = evaluate (game_board gt)  $ other(game_turn gt) in trace (show (pieces $ game_board gt) ++ " "++ show x ++ " " ++ show (game_turn gt)) x;
+minimax d True gt =  if length (next_moves gt) == 0 --  If maximising player get best score
+                         then (maxBound::Int) -- found winning tree
+                     else maximum $ foldl (\acc moves -> (minimax (d-1) False (snd moves)):acc) [] (next_moves gt)
+minimax d False gt = if length (next_moves gt) == 0 --  If minimising player get worst score
+                         then (minBound::Int)-- found lossing tree
+                     else minimum $ foldl (\acc moves -> (minimax (d-1) True (snd moves)):acc) [] (next_moves gt)
+
+
+getBestMove :: Int --  Maximum search depth
+               -> GameTree --  Initial game tree
                -> Position
-getBestMove n gt = snd $ maximum $ zip (map (minimax_ab 1 alpha beta  .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
+getBestMove n gt = snd $ maximum $ zip (map (minimax 1  True  .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
                             where alpha = (minBound :: Int)+1
                                   beta  = (maxBound :: Int)-1
 
 
+--minimax :: Int -> GameTree -> Int
+--minimax depth gt
+--  | depth <= 0         = evaluate (game_board gt) (game_turn gt)
+--  | depth `mod` 2 == 0 = let moves = map (minimax (depth - 1)) (map snd (next_moves gt))
+--                         in if moves == []
+--                              then evaluate  (game_board gt) (game_turn gt)
+--                              else minimum $ map (minimax (depth - 1)) (map snd (next_moves gt))
+--  | depth `mod` 2 == 1 = let moves = map (minimax (depth - 1)) (map snd (next_moves gt))
+--                         in if moves == []
+--                              then evaluate  (game_board gt) (game_turn gt)
+--                              else maximum $ map (minimax (depth - 1)) (map snd (next_moves gt))
+--
+--
+--getBestMove :: Int -> GameTree -> Position
+--getBestMove depth tree = snd $ maximum $ zip (map ((minimax (1)).snd) (next_moves tree)) (map fst (next_moves tree))
+
 
 -- Update the world state after some time has passed
-updateWorld :: Float -- ^ time since last update (you can ignore this)1
-            -> World -- ^ current world state
+updateWorld :: Float --  time since last update (you can ignore this)1
+            -> World --  current world state
             -> IO World
-updateWorld t w   | turn w == h_player w   = return $ w
+updateWorld t w   | turn w == h_player w || (pVp w)  = return $ w
                   | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col
                                           in case makeMove (board w) (other $ h_player w) move of
                                                  Just new_board -> case fst $ won new_board of
@@ -117,20 +136,20 @@ generateMoves b c |length (pieces b) == 0  = [(3,3)]
                   |otherwise               = all
                    where all = getAllMoves b
                          winning = [] -- getWinningMoves b c all
-                         good = getBestMoves b c all
+                         good = [] -- getBestMoves b c all
 
--- | Gets all the free moves
+-- |Gets all the free moves
 getAllMoves :: Board -> [Position]
-getAllMoves b = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0..fromIntegral $ size b], y <-[0..fromIntegral $ size b]]
+getAllMoves b = filter (`notElem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.. size b], y <-[0..  size b]]
 
--- | Gets winning moves; not fully functional
+-- |Gets winning moves; not fully functional
 getWinningMoves :: Board -> Col -> [Position] ->[Position]
 getWinningMoves b c all_moves = foldr(\(x,y) acc-> case makeMove b c (x,y) of
                                                             Just new_board -> if fst (won new_board) then (x,y):acc else acc
                                                             Nothing -> acc
                                        ) [] all_moves
 
--- | Gets moves with good scors
+-- |Gets moves with good scors
 getBestMoves :: Board -> Col -> [Position] ->[Position]
 getBestMoves b c all_moves = let a = foldr(\(x,y) acc-> case makeMove b c (x,y) of
                                                                   Just new_board -> let score = evaluate new_board c in

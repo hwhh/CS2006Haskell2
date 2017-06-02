@@ -7,21 +7,25 @@ Encodes / Decodes all of the data types in to binary
 -}
 
 instance Binary World where
-   put (World b c h go hp ai lm) =  do put b
-                                       put c
-                                       put h
-                                       put go
-                                       put hp
-                                       put ai
-                                       put lm
-   get = do b  <- get
+   put (World f b c h go hp ai lm pvp) =  do put f
+                                             put b
+                                             put c
+                                             put h
+                                             put go
+                                             put hp
+                                             put ai
+                                             put lm
+                                             put pvp
+   get = do f <- get
+            b  <- get
             c  <- get
             h  <- get
             go <- get
             hp <- get
             ai <- get
             lm <- get
-            return (World b c h go hp ai lm)
+            pvp <- get
+            return (World f b c h go hp ai lm pvp)
 
 
 
@@ -39,12 +43,18 @@ instance Binary Board  where
             return (Board s t p w Nothing)
 
 instance Binary Flags where
-   put (Flags h w) = do put h
-                        put w
+   put (Flags bs t h w p) = do put bs
+                               put t
+                               put h
+                               put w
+                               put p
 
-   get = do h <- get
+   get = do bs <- get
+            t <- get
+            h <- get
             w <- get
-            return (Flags h w)
+            p <- get
+            return (Flags bs t h w p)
 
 
 instance Binary Col where

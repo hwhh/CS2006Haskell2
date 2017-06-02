@@ -78,8 +78,8 @@ data World = World { flags :: Flags,
 
 
 initBoard :: Flags -> Board
-initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 6)
-                                      (if t then 4 else 4)
+initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
+                                      (if t then 3 else 5)
                                       [] (False, Nothing) (Nothing)
 
 -- |Creates an IO World
@@ -109,28 +109,6 @@ getRandomTuple size = do
        return (randomX, randomY)
 
 
--- |Genereates the first cell and a direction for every line > target on the board
-createLines ::Board -> [(Position, Direction)]
-createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
-                zip (zip (repeat 0) [0..s]) (repeat (1,0)) ++ --W && E
-                zip (zip [l,l-1..0] (repeat 0)) (repeat (1,1)) ++zip (zip (repeat 0) [1..l]) (repeat (1,1))++
-                zip (zip (repeat 0) [l..s]) (repeat (1,-1))++zip (zip [1..l] (repeat s)) (repeat (1,-1))
-               where s = size b
-                     l = s - (target b)
-
-
--- |Given a position and direction generate the whole line
-createLine :: Board -> Int -> [(Position, Direction)] -> [Position]
-createLine b 0 pos     = filter (\(x,y) -> (x<=s && x>=0) && (y<=s && y>=0)) $ map fst pos
-                       where s = fromIntegral (size b)
-createLine b n (p:pos) = createLine b (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
-                       where d1 = fst (snd p )
-                             d2 = snd (snd p)
-                             p1 = fst (fst p)
-                             p2 = snd (fst p)
-
-
-
 -- |Makes a move on the board
 makeMove :: Board -> Col -> Position -> Maybe Board
 makeMove b c p
@@ -138,7 +116,7 @@ makeMove b c p
             | fst p  < s && snd p < s  && fst p  > -1 && snd p > -1 =  -- Checks pieces in on the board
                                             case elem p (map fst (pieces b)) of
                                                 True -> Nothing
-                                                False ->case checkWon (b {pieces =  ((p, c):pieces b)}) c (target b) of
+                                                False ->case checkWon (b {pieces =  ((p, c):pieces b)}) c of
                                                             True -> Just (b {pieces =  ((p, c):pieces b), won=(True, Just c), previous_board=Just pd})
                                                             False ->Just (b {pieces =  ((p, c):pieces b), previous_board=Just pd})
             | otherwise = Nothing
@@ -164,8 +142,8 @@ For every position ((x, y), col) in the 'pieces' list:
 -}
 
 -- |Checks if the game has been won
-checkWon :: Board -> Col ->Int -> Bool
-checkWon b c target = if checkLines b c target combinations == 1 then True else False
+checkWon :: Board -> Col -> Bool
+checkWon b c = if checkLines b c (target b) combinations == 1 then True else False
               where combinations = createLines b
 
 
@@ -175,7 +153,6 @@ checkLines _ _ _ [] = 0
 checkLines b c target (x:xs) | maximum (map fst (checkLine b c (createLine b s (x:[])))) == target = 1
                              | otherwise = checkLines b c target xs
                              where s = (size b)
-
 
 -- |Calculates the total number of adjacent cells
 checkLine :: Board -> Col -> [Position] -> [(Int, (Position, Maybe Col))]
@@ -190,93 +167,6 @@ sumList posses c =  tail $ scanl (\(a1, a2) (s,(p,col))  -> case col of
                                                 Just col -> if col == c then (a1+1, Just col) else (0, Just (other col))
                                                 Nothing -> (a1+1, Nothing)
                       ) (0, Nothing) posses
-
-
-
-
-
--- check if there is a way to form a 5 and win. And if there is not, the next should be to check if Your opponent can do that, and if yes, then defense
--- counting the number of bounded, unbounded and partially bounded continuous sequences of stones
-
-
-
---checkPositions :: Board -> Col -> [(Position, Direction)] -> Bool
---checkPositions b c [] = False
---checkPositions b c (x:xs) | checkPosition b p d c (target b) == True = True
---                          | otherwise = checkPositions b c  (filter (`notElem` createLine b p d) xs)
---                        where p = fst x
---                              d = snd x
---
-
-
-
--- o = occupied by color, e = empty
-checkPosition :: Board -> Position -> Direction -> Col -> (Int, Int) -> Int
-checkPosition b p d c (o, e) | not (onBoard next b)  && (o+e) < (target b) = 0
-                             | next `elem` map (fst) (filter ((==c). other .snd) (pieces b)) && (o+e) < (target b) = 0
-                             | next `notElem`  map (fst) (filter ((==c).snd) (pieces b)) && (o+e) == (target b) + 1 = o
-                             | otherwise = case next `elem`  map (fst) (filter ((==c).snd) (pieces b)) of
-                                                True -> checkPosition b next d c ((o+1), e)
-                                                False -> checkPosition b next d c (o,(e+1))
-                            where next = (fst p + fst d, snd p +snd d)
-
-
-
-onBoard :: Position -> Board -> Bool
-onBoard p b = if (fst p >= 0 && fst p <= (size b)) && (snd p >= 0 && snd p <= (size b)) then True else False
-
-
--- |Gets a score for a player the score needs to be reset after blocked
-getPlayersScore :: Board -> Col -> Int
-getPlayersScore b c = foldl(\acc (p,d) -> acc+checkPosition b p d c (1,0)) 0 combinations
-                     where combinations = [(x, y) | x <-  map (fst) (filter ((==c).snd) (pieces b)), y <- dirs]
-
-
-
-
--- |Evalutes the board for a given player
-evaluate :: Board -> Col -> Int
-evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- Checks if won or loss
-               | fst (won b) && snd (won b) == Just (other col) = (minBound :: Int)--  Checks if won or loss
-               | otherwise = 0;--(getPlayersScore b col ) - (getPlayersScore b (other col) )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
---createLine b s (x:[]) -- Creates the line
--- l' = checkLine b c l -
--- checkWinnable b l' Nothing c True
-
-
---if checkConsequtive b col 3 == True then 10;
---                        else 0;
-
-
 
 
 -- |check wether there are adjacent cells
@@ -302,41 +192,7 @@ checkWinnable b (x:xs) prev c first   |length (x:xs) <= (target b) = case maximu
                                 where next_x = take (target b) (x:xs)
                                       max  =  map fst $ sumList next_x c
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
---Get all rows and check if winnable, if so check for 4 ?
---Calculates the score based on how many in a row and if the row is winnable
+-- |Calculates the score based on how many in a row and if the row is winnable
 getScore :: Board -> Col -> [(Position, Direction)] -> Int
 getScore b c lines = foldl(\acc x -> let l = createLine b s (x:[]) -- Creates the line
                                          l' = checkLine b c l  in -- Analayses the line
@@ -347,21 +203,36 @@ getScore b c lines = foldl(\acc x -> let l = createLine b s (x:[]) -- Creates th
                                                False -> acc
                                    ) 0 lines
                             where s = (size b)
+-- |Gets a score for a player
+getPlayersScore :: Board -> Col -> Int
+getPlayersScore b col = getScore b col (createLines b)
 
 
+-- |Evalutes the board for a given player
+evaluate :: Board -> Col -> Int
+evaluate b col = if fst (won b) && snd (won b) == Just col then (maxBound :: Int) -- Checks if won or loss
+                 else if fst (won b) && snd (won b) == Just (other col) then (minBound :: Int)--  Checks if won or loss
+                 else (getPlayersScore b col)-(getPlayersScore b (other col))
+
+-- |Genereates the first cell and a direction for every line > target on the board
+createLines ::Board -> [(Position, Direction)]
+createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
+                zip (zip (repeat 0) [0..s]) (repeat (1,0)) ++ --W && E
+                zip (zip [l,l-1..0] (repeat 0)) (repeat (1,1)) ++zip (zip (repeat 0) [1..l]) (repeat (1,1))++
+                zip (zip (repeat 0) [l..s]) (repeat (1,-1))++zip (zip [1..l] (repeat s)) (repeat (1,-1))
+               where s = size b
+                     l = s - (target b)
 
 
+-- |Given a position and direction generate the whole line
+createLine :: Board -> Int -> [(Position, Direction)] -> [Position]
+createLine b 0 pos     = filter (\(x,y) -> (x<=s && x>=0) && (y<=s && y>=0)) $ map fst pos
+                       where s = fromIntegral (size b)
+createLine b n (p:pos) = createLine b (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
+                       where d1 = fst (snd p )
+                             d2 = snd (snd p)
+                             p1 = fst (fst p)
+                             p2 = snd (fst p)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+-- check if there is a way to form a 5 and win. And if there is not, the next should be to check if Your opponent can do that, and if yes, then defense
+-- counting the number of bounded, unbounded and partially bounded continuous sequences of stones

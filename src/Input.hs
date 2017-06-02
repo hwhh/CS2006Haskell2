@@ -23,18 +23,18 @@ fieldSize@(width, height) = (720, 720) :: (Float, Float)
 -- to stderr, which can be a very useful way of debugging!
 handleInput :: Event -> World -> IO World
 
-handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w =  case makeMove b col (f, s) of ----if (turn w == h_player w) then
+handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w =  case makeMove b col (f, s) of
                                                                           Just new_board -> case fst $ won new_board of
                                                                                  True -> return $ w {board = new_board, turn = other col}
                                                                                  False ->return $ w {board = new_board, turn = other col}
-                                                                          Nothing -> return w -- show hint right click ?
-                                                                 --else return w
+                                                                          Nothing -> return w
+
                                                                  where b = board w
                                                                        col = turn w
                                                                        (f,s) = screenToCell b x y
 handleInput (EventKey (Char k) Down _ _) w
     = case k of
-           'n' -> return $ w{board = initBoard, turn=Black}
+           'n' -> return $ w{board = initBoard(flags w) , turn=Black}
            'u' -> undo w
            's' -> do (trace("Saving game") B.writeFile "SaveFile.dat" (encode w)); return w
            'l' -> do file <- B.readFile "SaveFile.dat"; return $ (trace("Loading game") decode file)

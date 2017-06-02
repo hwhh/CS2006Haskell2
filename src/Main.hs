@@ -35,13 +35,17 @@ main = do   args <- getArgs
                 handleInput -- in Input.hs
                 updateWorld -- in AI.hs
 
--- | Gets the program arguments
+-- |Gets the program arguments
 getSetting :: [String] -> Flags
-getSetting args = foldl (\(Flags h w ) str -> case str of
-                                                  "-h" -> (Flags True w ) --added
-                                                  "-w" -> (Flags h True)
-                                                  _    -> (Flags h w)) (Flags False False) args
--- | Loads the pictures
+getSetting args = foldl (\(Flags bs t h w p) str -> case str of
+                                                          "-b" -> (Flags True t h w p)
+                                                          "-t" -> (Flags bs True h w p)
+                                                          "-h" -> (Flags bs t True w p ) --added
+                                                          "-w" -> (Flags bs t h True p)
+                                                          "-p" -> (Flags bs t h w True)
+                                                          _    -> (Flags bs t h w p)) (Flags False False False False False) args
+
+-- |Loads the pictures
 getPictures :: IO [Picture]
 getPictures = do  board <- loadBMP "./Pictures/b.bmp"; return board
                   white <- loadBMP "./Pictures/w1o.bmp"
