@@ -29,8 +29,9 @@ drawWorld p w| fst (won(board w))   = return $  let message = translate (-330.0)
 
 -- |Draws the grid
 drawGrid :: Board -> Picture --110, 80, 24, 24, 55, 40
-drawGrid b =pictures[uncurry translate (cellToScreen b x y (60, 60)) $ color white $ rectangleWire (width/(fromIntegral s))  (height/(fromIntegral s)) |x <- [0 .. s-1], y <- [0 ..s-1]]
+drawGrid b =pictures[uncurry translate (cellToScreen b x y dimensions) $ color white $ rectangleWire (width/(fromIntegral s))  (height/(fromIntegral s)) |x <- [0 .. s-1], y <- [0 ..s-1]]
                     where s = (size b)
+                          dimensions = ( (width/fromIntegral s/2),(height/fromIntegral s/2) )
 
 -- |No longer used but can also load in PNG images
 drawPNG ::  Col -> Picture

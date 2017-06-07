@@ -4,9 +4,12 @@ import Data.List
 import Debug.Trace
 import Data.Maybe
 import System.Random
+import Data.Tuple
 
 dirs = [(0, -1), (1, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1)]
 --          0             1             2           3           4           5           6           7
+
+
 
 data Col = Black | White
   deriving (Show, Eq)
@@ -32,6 +35,7 @@ data Board = Board { size :: Int,
                      pieces :: [(Position, Col)],
                      won :: (Bool, Maybe Col),
                      previous_board :: Maybe Board
+                   --  lines :: [[(Position)]]
                    }
   deriving Show
 
@@ -54,15 +58,8 @@ undo world = let pb = previous_board (board world)
              in case pb of -- Checks theres a previous world
                     Just b -> return $ world { board = fromJust pb, turn = (other (turn world)) }
                     Nothing -> return $ world
--- Default board is 6x6, target is 3 in a row, no initial pieces
 
--- Overall state is the board and whose turn it is, plus any further
--- information about the world (this may later include, for example, player
--- names, timers, information about rule variants, etc)
---
--- Feel free to extend this, and 'Board' above with anything you think
--- will be useful (information for the AI, for example, such as where the
--- most recent moves were).
+
 data World = World { flags :: Flags,
                      board :: Board,
                      turn :: Col,
@@ -72,15 +69,16 @@ data World = World { flags :: Flags,
                      ai_level :: Int,
                      last_move :: Maybe (Position, Col),
                      pVp :: Bool
+
                      }
  deriving Show
 
 
 
 initBoard :: Flags -> Board
-initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 6)
-                                      (if t then 4 else 4)
-                                      [] (False, Nothing) (Nothing)
+initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
+                                      (if t then 4 else 5)
+                                      [] (False, Nothing) (Nothing) --((0,6),Black),((6,6),White),((0,5),Black),((6,5),White)
 
 -- |Creates an IO World
 makeWorld :: Flags -> IO World
@@ -109,15 +107,15 @@ getRandomTuple size = do
        return (randomX, randomY)
 
 
+
 -- |Genereates the first cell and a direction for every line > target on the board
 createLines ::Board -> [(Position, Direction)]
 createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
                 zip (zip (repeat 0) [0..s]) (repeat (1,0)) ++ --W && E
-                zip (zip [l,l-1..0] (repeat 0)) (repeat (1,1)) ++zip (zip (repeat 0) [1..l]) (repeat (1,1))++
-                zip (zip (repeat 0) [l..s]) (repeat (1,-1))++zip (zip [1..l] (repeat s)) (repeat (1,-1))
+                zip (zip [l,l-1..0] (repeat 0)) (repeat (1,1)) ++ zip (zip (repeat 0) [1,2..l]) (repeat (1,1))++
+                zip (zip (repeat 0) [s,s-1..s-l]) (repeat (1,-1)) ++ zip (zip [1,2..l] (repeat s)) (repeat (1,-1))
                where s = size b
-                     l = s - (target b)
-
+                     l = (s+1) - (target b)
 
 -- |Given a position and direction generate the whole line
 createLine :: Board -> Int -> [(Position, Direction)] -> [Position]
@@ -131,6 +129,7 @@ createLine b n (p:pos) = createLine b (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
 
 
 
+
 -- |Makes a move on the board
 makeMove :: Board -> Col -> Position -> Maybe Board
 makeMove b c p
@@ -138,7 +137,7 @@ makeMove b c p
             | fst p  < s && snd p < s  && fst p  > -1 && snd p > -1 =  -- Checks pieces in on the board
                                             case elem p (map fst (pieces b)) of
                                                 True -> Nothing
-                                                False ->case checkWon (b {pieces =  ((p, c):pieces b)}) c (target b) of
+                                                False ->case checkWon (b {pieces =  ((p, c):pieces b)}) c of
                                                             True -> Just (b {pieces =  ((p, c):pieces b), won=(True, Just c), previous_board=Just pd})
                                                             False ->Just (b {pieces =  ((p, c):pieces b), previous_board=Just pd})
             | otherwise = Nothing
@@ -152,20 +151,10 @@ makeMove b c p
 -- Returns 'Nothing' if neither player has won yet
 -- Returns 'Just c' if the player 'c' has won
 
-{- Hint: One way to implement 'checkWon' would be to write functions
-which specifically check for lines in all 8 possible directions
-(NW, N, NE, E, W, SE, SW)
-
-In these functions:
-To check for a line of n in a row in a direction D:
-For every position ((x, y), col) in the 'pieces' list:
-- if n == 1, the colour 'col' has won
-- if n > 1, move one step in direction D, and check for a line of n-1 in a row.
--}
 
 -- |Checks if the game has been won
-checkWon :: Board -> Col ->Int -> Bool
-checkWon b c target = if checkLines b c target combinations == 1 then True else False
+checkWon :: Board -> Col -> Bool
+checkWon b c = if checkLines b c (target b) combinations == 1 then True else False
               where combinations = createLines b
 
 
@@ -175,7 +164,6 @@ checkLines _ _ _ [] = 0
 checkLines b c target (x:xs) | maximum (map fst (checkLine b c (createLine b s (x:[])))) == target = 1
                              | otherwise = checkLines b c target xs
                              where s = (size b)
-
 
 -- |Calculates the total number of adjacent cells
 checkLine :: Board -> Col -> [Position] -> [(Int, (Position, Maybe Col))]
@@ -192,11 +180,118 @@ sumList posses c =  tail $ scanl (\(a1, a2) (s,(p,col))  -> case col of
                       ) (0, Nothing) posses
 
 
+-- |check wether there are adjacent cells
+checkOpening :: Col-> (Maybe Col, Maybe Col) -> Int
+checkOpening col cols |cols == (Just col, Just col) = 0
+                      |Just col == fst cols || Just col == snd cols=  1
+                      |otherwise =  2
+
+
+-- |checks if player can win with exactly x in a row
+scoreLine :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Int -> Int
+scoreLine b (x:xs) prev c first score  |length (x:xs) <= (target b) = case maximum (map fst max) == (target b) of  -- checks if n free slots in a row
+                                                                           True ->  if (checkOpening c (prev, Nothing)) ==2
+                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in  score + new_score^new_score -- Checks the opeings by getting the previous and the next cells
+                                                                                        else score
+
+                                                                           False -> score
+                                       |first                       =  case maximum (map fst max) == (target b) of -- Checks if n free slots in a row
+                                                                            True ->  if (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2
+                                                                                         then let new_score = (length $ filter  (== Just c) (map snd max)) in scoreLine b xs (snd (snd (x))) c False (score + new_score^new_score)
+                                                                                        -- Checks the opeings by getting the previous and the next cells
+                                                                                         else scoreLine b xs (snd (snd (x))) c False score
+                                                                            False -> scoreLine b xs (snd (snd (x))) c False score
+                                       |otherwise                   = case maximum (map fst max) == (target b) of
+                                                                            True ->  if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2
+                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in scoreLine b xs (snd (snd (x))) c False (score + new_score^new_score)   -- Checks the opeings by getting the previous and the next cells
+                                                                                        else scoreLine b xs (snd (snd (x))) c False score
+                                                                            False -> scoreLine b xs (snd (snd (x))) c False score
+
+                                where next_x = take (target b) (x:xs)
+                                      max  =  sumList next_x c
+
+
 
 
 
 -- check if there is a way to form a 5 and win. And if there is not, the next should be to check if Your opponent can do that, and if yes, then defense
 -- counting the number of bounded, unbounded and partially bounded continuous sequences of stones
+--It also only places a piece within two squares of any other piece, significantly reducing the computation time in the first few moves.
+
+compareList :: (Eq a) => [a] -> [a] -> Bool
+compareList a = not . null . intersect a
+
+result :: (Eq a) => [a] -> [a] -> Bool
+result list1 list2 = (compareList list1 list2)
+
+getScore :: Board -> Col -> [(Position, Direction)] -> Int
+getScore b c lines = foldl(\acc x -> let line = createLine b s (x:[])
+                                         l = checkLine b c line in
+                                         case result (map (fst . snd) l) (map fst (pieces b)) of
+                                               True -> acc + scoreLine b l Nothing c True 0
+                                               False -> acc
+                                   ) 0 lines
+                            where s = (size b)
+
+
+-- |Evalutes the board for a given player
+evaluate :: Board -> Col -> Int
+evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- Checks if won or loss
+               | fst (won b) && snd (won b) == Just (other col) = (minBound :: Int)--  Checks if won or loss
+               | otherwise = (getScore b col l) - (getScore b (other col) l)
+               where l = (createLines b)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- |checks if player can win with exactly x in a row
+--checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Bool
+--checkWinnable b (x:xs) prev c first   |length (x:xs) <= (target b) = case maximum max == (target b) of  -- checks if n free slots in a row
+--                                                                           False -> False
+--                                                                           True ->  if (checkOpening c (prev, Nothing)) ==2 then True -- Checks the opeings by getting the previous and the next cells
+--                                                                                    else False
+--                                      |first                       =  case maximum max == (target b) of -- Checks if n free slots in a row
+--                                                                           False -> checkWinnable b xs (snd (snd (x))) c False
+--                                                                           True ->  if  (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2 then True -- Checks the opeings by getting the previous and the next cells
+--                                                                                    else checkWinnable b xs (snd (snd (x))) c False
+--                                      |otherwise                   = case maximum max == (target b) of
+--                                                                          False -> checkWinnable b xs (snd (snd (x))) c False
+--                                                                          True ->  if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2 then True -- Checks the opeings by getting the previous and the next cells
+--                                                                                   else  checkWinnable b xs (snd (snd (x))) c False
+--                                where next_x = take (target b) (x:xs)
+--                                      max  =  map fst $ sumList next_x c
+
+
+
+--scoreLine:: Board -> Col -> [(Int, (Position, Maybe Col))] -> Int -> (Int, Int) -> Int
+--scoreLine b c (x:xs) score  (o, e) | length (x:xs) == 1 = score
+--                                   | snd (snd x) /= Just (other c) && (o+e) == (target b) = case snd (snd (xs !! 0)) == Just c of
+--                                                                                                  True -> let x = scoreLine b c xs score (0, 0) in trace (show xs ++ " 4 " ++ show score ++ " " ++ show (o,e)) x
+--                                                                                                  False -> let x =  scoreLine b c xs (score+o) (0, 0) in trace (show xs ++ " 5 " ++ show score ++ " " ++ show (o,e)) x
+--
+--                                   | snd (snd x) == Just (other c) && (o+e) == (target b) = let x = scoreLine b c xs (score-o) (0, 0) in trace (show xs ++ " " ++ show score ++ " " ++ show (o,e)) x
+--                                   | snd (snd x) == Just c && (o+e) < (target b) = let x = scoreLine b c xs score (o+1, e) in trace (show xs ++ " 1 " ++ show score ++ " " ++ show (o,e)) x
+--                                   | snd (snd x) == Nothing && (o+e) < (target b) = let x = scoreLine b c xs score (o, e+1)in trace (show xs ++ " 2 " ++ show score ++ " " ++ show (o,e)) x
+--                                   | snd (snd x) == Just (other c) && (o+e) < (target b) = let x = scoreLine b c xs score (0, 0)in trace (show xs ++ " 3 " ++ show score ++ " " ++ show (o,e)) x
+--
+--
+--
+
 
 
 
@@ -211,59 +306,34 @@ sumList posses c =  tail $ scanl (\(a1, a2) (s,(p,col))  -> case col of
 
 
 -- o = occupied by color, e = empty
-checkPosition :: Board -> Position -> Direction -> Col -> (Int, Int) -> Int
-checkPosition b p d c (o, e) | not (onBoard next b)  && (o+e) < (target b) = 0
-                             | next `elem` map (fst) (filter ((==c). other .snd) (pieces b)) && (o+e) < (target b) = 0
-                             | next `notElem`  map (fst) (filter ((==c).snd) (pieces b)) && (o+e) == (target b) + 1 = o
-                             | otherwise = case next `elem`  map (fst) (filter ((==c).snd) (pieces b)) of
-                                                True -> checkPosition b next d c ((o+1), e)
-                                                False -> checkPosition b next d c (o,(e+1))
-                            where next = (fst p + fst d, snd p +snd d)
+--checkPosition :: Board -> Position -> Direction -> Col -> (Int, Int) -> (Int, [(Position, Direction)])
+--checkPosition b p d c (o, e)  | next `elem` own
+--
+--                              | next `elem` && (o+e) <= (target b) = 0 -- if oppostion counter found before x+1 blanks
+--
+--                            where next = (fst p + fst d, snd p +snd d)
+--                                  own =  map (fst) (filter ((==c).snd) (pieces b))
+--                                  other =  map (fst) (filter ((==c). other .snd) (pieces b))
+--
+--
 
-
-
-onBoard :: Position -> Board -> Bool
-onBoard p b = if (fst p >= 0 && fst p <= (size b)) && (snd p >= 0 && snd p <= (size b)) then True else False
-
-
--- |Gets a score for a player the score needs to be reset after blocked
-getPlayersScore :: Board -> Col -> Int
-getPlayersScore b c = foldl(\acc (p,d) -> acc+checkPosition b p d c (1,0)) 0 combinations
-                     where combinations = [(x, y) | x <-  map (fst) (filter ((==c).snd) (pieces b)), y <- dirs]
-
-
-
-
--- |Evalutes the board for a given player
-evaluate :: Board -> Col -> Int
-evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- Checks if won or loss
-               | fst (won b) && snd (won b) == Just (other col) = (minBound :: Int)--  Checks if won or loss
-               | otherwise = 0;--(getPlayersScore b col ) - (getPlayersScore b (other col) )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+--checkPosition :: Board -> Position -> Direction -> Col -> Int -> Bool
+--checkPosition b p d c 0 | p `notElem` map (fst) (pieces b) && onBoard b p = True
+--                        | otherwise = False
+--checkPosition b p d c n | p `notElem` map (fst) (filter ((==c).snd) (pieces b)) = False
+--                        | otherwise = checkPosition b (fst p + fst d, snd p + snd d) d c (n-1)
+----
+--
+----
+--onBoard :: Board -> Position -> Bool
+--onBoard b p = if (fst p >= 0 && fst p <= (size b)) && (snd p >= 0 && snd p <= (size b)) then True else False
+--
+--
+---- |Gets a score for a player the score needs to be reset after blocked
+--getPlayersScore :: Board -> Col -> Int
+--getPlayersScore b c = foldl(\acc (p,d) -> acc+checkPosition b p d c ) 0 combinations
+--                     where combinations = [(x, y) | x <-  map (fst) (filter ((==c).snd) (pieces b)), y <- dirs]
+--
 
 
 
@@ -278,47 +348,45 @@ evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- C
 
 
 
-
--- |check wether there are adjacent cells
-checkOpening :: Col-> (Maybe Col, Maybe Col) -> Int
-checkOpening col cols |cols == (Just col, Just col) = 0
-                      |Just col == fst cols || Just col == snd cols=  1
-                      |otherwise =  2
-
--- |checks if player can win with exactly x in a row
-checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Bool
-checkWinnable b (x:xs) prev c first   |length (x:xs) <= (target b) = case maximum max == (target b) of  -- checks if n free slots in a row
-                                                                           False -> False
-                                                                           True ->  if (checkOpening c (prev, Nothing)) ==2 then True -- Checks the opeings by getting the previous and the next cells
-                                                                                    else False
-                                      |first                       =  case maximum max == (target b) of -- Checks if n free slots in a row
-                                                                          False -> checkWinnable b xs (snd (snd (x))) c False
-                                                                          True ->  if  (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2 then True -- Checks the opeings by getting the previous and the next cells
-                                                                                   else checkWinnable b xs (snd (snd (x))) c False
-                                      |otherwise                   = case maximum max == (target b) of
-                                                                         False -> checkWinnable b xs (snd (snd (x))) c False
-                                                                         True ->  if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2 then True -- Checks the opeings by getting the previous and the next cells
-                                                                                  else  checkWinnable b xs (snd (snd (x))) c False
-                                where next_x = take (target b) (x:xs)
-                                      max  =  map fst $ sumList next_x c
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+--
+---- |check wether there are adjacent cells
+--checkOpening :: Col-> (Maybe Col, Maybe Col) -> Int
+--checkOpening col cols |cols == (Just col, Just col) = 0
+--                      |Just col == fst cols || Just col == snd cols=  1
+--                      |otherwise =  2
+--
+---- |checks if player can win with exactly x in a row
+--checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Bool
+--checkWinnable b (x:xs) prev c first   |length (x:xs) <= (target b) = case maximum max == (target b) of  -- checks if n free slots in a row
+--                                                                           False -> False
+--                                                                           True ->  if (checkOpening c (prev, Nothing)) ==2 then True -- Checks the opeings by getting the previous and the next cells
+--                                                                                    else False
+--                                      |first                       =  case maximum max == (target b) of -- Checks if n free slots in a row
+--                                                                          False -> checkWinnable b xs (snd (snd (x))) c False
+--                                                                          True ->  if  (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2 then True -- Checks the opeings by getting the previous and the next cells
+--                                                                                   else checkWinnable b xs (snd (snd (x))) c False
+--                                      |otherwise                   = case maximum max == (target b) of
+--                                                                         False -> checkWinnable b xs (snd (snd (x))) c False
+--                                                                         True ->  if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2 then True -- Checks the opeings by getting the previous and the next cells
+--                                                                                  else  checkWinnable b xs (snd (snd (x))) c False
+--                                where next_x = take (target b) (x:xs)
+--                                      max  =  map fst $ sumList next_x c
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
+--
 
 
 
@@ -335,24 +403,26 @@ checkWinnable b (x:xs) prev c first   |length (x:xs) <= (target b) = case maximu
 
 
 
---Get all rows and check if winnable, if so check for 4 ?
---Calculates the score based on how many in a row and if the row is winnable
-getScore :: Board -> Col -> [(Position, Direction)] -> Int
-getScore b c lines = foldl(\acc x -> let l = createLine b s (x:[]) -- Creates the line
-                                         l' = checkLine b c l  in -- Analayses the line
-                                        case checkWinnable b l' Nothing c True of
-                                               True -> let max = sumList l' c in
-                                                            if maximum (map fst max) >= (target b) && Just c `elem` map snd max then acc+maximum (map fst max) -- Gets the maximum number of adjacent solts that can be filled by colour
-                                                            else acc + (sum $ map fst $ filter (\(s,(p,col)) -> col == Just c)l') -- Sums the number of adjacent pices for colour
-                                               False -> acc
-                                   ) 0 lines
-                            where s = (size b)
 
 
-
-
-
-
+----Get all rows and check if winnable, if so check for 4 ?
+----Calculates the score based on how many in a row and if the row is winnable
+--getScore :: Board -> Col -> [(Position, Direction)] -> Int
+--getScore b c lines = foldl(\acc x -> let l = createLine b s (x:[]) -- Creates the line
+--                                         l' = checkLine b c l  in -- Analayses the line
+--                                        case checkWinnable b l' Nothing c True of
+--                                               True -> let max = sumList l' c in
+--                                                            if maximum (map fst max) >= (target b) && Just c `elem` map snd max then acc+maximum (map fst max) -- Gets the maximum number of adjacent solts that can be filled by colour
+--                                                            else acc + (sum $ map fst $ filter (\(s,(p,col)) -> col == Just c)l') -- Sums the number of adjacent pices for colour
+--                                               False -> acc
+--                                   ) 0 lines
+--                            where s = (size b)
+--
+--
+--
+--
+--
+--
 
 
 
