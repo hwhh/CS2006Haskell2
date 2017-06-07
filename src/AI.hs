@@ -2,7 +2,7 @@ module AI where
 
 import Board
 import Debug.Trace
-import Data.List
+import qualified Data.List as L
 import Data.Maybe
 import Data.Function
 import qualified Data.Set as Set
@@ -101,16 +101,17 @@ getBestMove n gt = snd $ maximum $ zip (map (minimax_ab 2 alpha beta .snd) (next
 updateWorld :: Float --  time since last update (you can ignore this)1
             -> World --  current world state
             -> IO World
-updateWorld t w   | turn w == h_player w || (pVp w)  = return $ w
-                  | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col
-                                          in case makeMove (board w) (other $ h_player w) move of
-                                                 Just new_board -> case fst $ won new_board of
-                                                       True -> return $ w {board = new_board, turn = other col}
-                                                       False -> return $ w {board = new_board, turn = other col}
-                                                 Nothing -> return $ w
-                   where b = board w
-                         col = turn w
-                         pd = (board w)
+updateWorld t w = return $ w
+--                   | turn w == h_player w || (pVp w)  =
+--                  | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col
+--                                          in case makeMove (board w) (other $ h_player w) move of
+--                                                 Just new_board -> case fst $ won new_board of
+--                                                       True -> return $ w {board = new_board, turn = other col}
+--                                                       False -> return $ w {board = new_board, turn = other col}
+--                                                 Nothing -> return $ w
+--                   where b = board w
+--                         col = turn w
+--                         pd = (board w)
 
 
 {- Hint: 'updateWorld' is where the AI gets called. If the world state
@@ -170,7 +171,7 @@ getBestMoves b c all_moves = let a = foldr(\(x,y) acc-> case makeMove b c (x,y) 
                                                                   Just new_board -> let score = evaluate new_board c in
                                                                                         if score > 0 then (score, (x,y)):acc else acc
                                                                   Nothing -> acc
-                                        ) [] all_moves in map snd $ take 10 $ reverse (sortBy (compare `on` fst) a)
+                                        ) [] all_moves in map snd $ take 10 $ reverse (L.sortBy (compare `on` fst) a)
 
 
 

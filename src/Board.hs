@@ -34,8 +34,9 @@ data Board = Board { size :: Int,
                      target :: Int,
                      pieces :: [(Position, Col)],
                      won :: (Bool, Maybe Col),
-                     previous_board :: Maybe Board
-                   --  lines :: [[(Position)]]
+                     previous_board :: Maybe Board,
+                     score :: (Int, Int),
+                     lines :: [[(Position)]]
                    }
   deriving Show
 
@@ -53,10 +54,11 @@ readsPrec d "White" = [(White, "")]
 readsPrec d "Black" = [(Black, "")]
 
 -- |Undoes the last move
+
 undo :: World -> IO World
 undo world = let pb = previous_board (board world)
              in case pb of -- Checks theres a previous world
-                    Just b -> return $ world { board = fromJust pb, turn = (other (turn world)) }
+                    Just b -> return $ world { board = fromJust pb,  turn = (other (turn world))}
                     Nothing -> return $ world
 
 
@@ -76,9 +78,15 @@ data World = World { flags :: Flags,
 
 
 initBoard :: Flags -> Board
-initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
-                                      (if t then 4 else 5)
-                                      [] (False, Nothing) (Nothing) --((0,6),Black),((6,6),White),((0,5),Black),((6,5),White)
+initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 2)
+                                      (if t then 4 else 3)
+                                      []
+                                      (False, Nothing)
+                                      (Nothing)
+                                      (0,0)
+                                      (createLines' (if bs then 6 else 2) (if t then 4 else 3))
+
+                                      --((0,6),Black),((6,6),White),((0,5),Black),((6,5),White)
 
 -- |Creates an IO World
 makeWorld :: Flags -> IO World
@@ -105,6 +113,29 @@ getRandomTuple size = do
        randomX <- randomRIO (1, size-1)
        randomY <- randomRIO (1, size-1)
        return (randomX, randomY)
+
+
+createLines' :: Int -> Int -> [[Position]]
+createLines' s t= init $ foldr(\p acc -> (createLine' s s (p:[])):acc ) [[]] $ createDirs s l
+               where l = (s+1) - t
+
+-- |Genereates the first cell and a direction for every line > target on the board
+createDirs ::Int -> Int -> [(Position, Direction)]
+createDirs s l = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
+                 zip (zip (repeat 0) [0..s]) (repeat (1,0)) ++ --W && E
+                 zip (zip [l,l-1..0] (repeat 0)) (repeat (1,1)) ++ zip (zip (repeat 0) [1,2..l]) (repeat (1,1))++
+                 zip (zip (repeat 0) [s,s-1..s-l]) (repeat (1,-1)) ++ zip (zip [1,2..l] (repeat s)) (repeat (1,-1))
+
+
+
+-- |Given a position and direction generate the whole line
+createLine' :: Int -> Int -> [(Position, Direction)] -> [Position]
+createLine' s 0 pos     = filter (\(x,y) -> (x<=s && x>=0) && (y<=s && y>=0)) $ map fst pos
+createLine' s n (p:pos) = createLine' s (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
+                       where d1 = fst (snd p )
+                             d2 = snd (snd p)
+                             p1 = fst (fst p)
+                             p2 = snd (fst p)
 
 
 
