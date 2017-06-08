@@ -25,8 +25,14 @@ handleInput :: Event -> World -> IO World
 
 handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w =  case makeMove b col (f, s) of
                                                                           Just new_board -> case fst $ won new_board of
-                                                                                 True -> return $ w {board = new_board, turn = other col} --w {board = new_board{score = updateScore b col }, turn = other col}
-                                                                                 False ->return $ w {board = new_board, turn = other col}--w {board = new_board{score = updateScore b col }, turn = other col}
+                                                                                 True -> if (pieces b) == []
+                                                                                            then return $ w {board = new_board, turn = other col}
+                                                                                         else
+                                                                                            return $ w {board = new_board{score = updateScore b col }, turn = other col}
+                                                                                 False ->if (pieces b) == []
+                                                                                             then return $ w {board = new_board, turn = other col}
+                                                                                          else
+                                                                                             return $ w {board = new_board{score = updateScore b col }, turn = other col}
                                                                           Nothing -> return w
 
                                                                  where b = board w
