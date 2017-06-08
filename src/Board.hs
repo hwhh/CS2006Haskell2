@@ -76,15 +76,14 @@ data World = World { flags :: Flags,
  deriving Show
 
 
-
 initBoard :: Flags -> Board
-initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
-                                      (if t then 4 else 5)
+initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 2)
+                                      (if t then 4 else 3)
                                       []
                                       (False, Nothing)
                                       (Nothing)
                                       (0,0)
-                                      (createLines (if bs then 6 else 15) (if t then 4 else 5))
+                                      (createLines' (if bs then 6 else 2) (if t then 4 else 3))
 
                                       --((0,6),Black),((6,6),White),((0,5),Black),((6,5),White)
 
@@ -115,8 +114,8 @@ getRandomTuple size = do
        return (randomX, randomY)
 
 
-createLines :: Int -> Int -> [[Position]]
-createLines s t= init $ foldr(\p acc -> (createLine s s (p:[])):acc ) [[]] $ createDirs s l
+createLines' :: Int -> Int -> [[Position]]
+createLines' s t= init $ foldr(\p acc -> (createLine' s s (p:[])):acc ) [[]] $ createDirs s l
                where l = (s+1) - t
 
 -- |Genereates the first cell and a direction for every line > target on the board
@@ -129,13 +128,35 @@ createDirs s l = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
 
 
 -- |Given a position and direction generate the whole line
-createLine :: Int -> Int -> [(Position, Direction)] -> [Position]
-createLine s 0 pos     = filter (\(x,y) -> (x<=s && x>=0) && (y<=s && y>=0)) $ map fst pos
-createLine s n (p:pos) = createLine s (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
+createLine' :: Int -> Int -> [(Position, Direction)] -> [Position]
+createLine' s 0 pos     = filter (\(x,y) -> (x<=s && x>=0) && (y<=s && y>=0)) $ map fst pos
+createLine' s n (p:pos) = createLine' s (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
                        where d1 = fst (snd p )
                              d2 = snd (snd p)
                              p1 = fst (fst p)
                              p2 = snd (fst p)
+
+
+
+-- |Genereates the first cell and a direction for every line > target on the board
+createLines ::Board -> [(Position, Direction)]
+createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
+                zip (zip (repeat 0) [0..s]) (repeat (1,0)) ++ --W && E
+                zip (zip [l,l-1..0] (repeat 0)) (repeat (1,1)) ++ zip (zip (repeat 0) [1,2..l]) (repeat (1,1))++
+                zip (zip (repeat 0) [s,s-1..s-l]) (repeat (1,-1)) ++ zip (zip [1,2..l] (repeat s)) (repeat (1,-1))
+               where s = size b
+                     l = (s+1) - (target b)
+
+-- |Given a position and direction generate the whole line
+createLine :: Board -> Int -> [(Position, Direction)] -> [Position]
+createLine b 0 pos     = filter (\(x,y) -> (x<=s && x>=0) && (y<=s && y>=0)) $ map fst pos
+                       where s = fromIntegral (size b)
+createLine b n (p:pos) = createLine b (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
+                       where d1 = fst (snd p )
+                             d2 = snd (snd p)
+                             p1 = fst (fst p)
+                             p2 = snd (fst p)
+
 
 
 
@@ -163,14 +184,14 @@ makeMove b c p
 
 -- |Checks if the game has been won
 checkWon :: Board -> Col -> Bool
-checkWon b c = if checkLines b c (target b) (Board.lines b) == 1 then True else False
-
+checkWon b c = if checkLines b c (target b) combinations == 1 then True else False
+              where combinations = createLines b
 
 
 -- |checks all the lines in every directions
-checkLines :: Board -> Col -> Int -> [[Position]] -> Int
+checkLines :: Board -> Col -> Int -> [(Position, Direction)] -> Int
 checkLines _ _ _ [] = 0
-checkLines b c target (x:xs) | maximum (map fst (checkLine b c x)) == target = 1
+checkLines b c target (x:xs) | maximum (map fst (checkLine b c (createLine b s (x:[])))) == target = 1
                              | otherwise = checkLines b c target xs
                              where s = (size b)
 
@@ -199,26 +220,27 @@ checkOpening col cols |cols == (Just col, Just col) = 0
 -- |checks if player can win with exactly x in a row
 scoreLine :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Int -> Int
 scoreLine b (x:xs) prev c first score  |length (x:xs) <= (target b) = case maximum (map fst max) == (target b) of  -- checks if n free slots in a row
-                                                                           True ->  if (checkOpening c (prev, Nothing)) ==2
-                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in  score + new_score^new_score -- Checks the opeings by getting the previous and the next cells
+                                                                           True ->  if (checkOpening c (prev, Nothing)) == 2
+                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in  score + new_score -- Checks the opeings by getting the previous and the next cells
                                                                                         else score
-
                                                                            False -> score
                                        |first                       =  case maximum (map fst max) == (target b) of -- Checks if n free slots in a row
-                                                                            True ->  if (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2
-                                                                                         then let new_score = (length $ filter  (== Just c) (map snd max)) in scoreLine b xs (snd (snd (x))) c False (score + new_score^new_score)
-                                                                                        -- Checks the opeings by getting the previous and the next cells
-                                                                                         else scoreLine b xs (snd (snd (x))) c False score
+                                                                            True ->if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2
+                                                                                       then let new_score = (length $ filter  (== Just c) (map snd max)) in
+                                                                                             if (new_score >= ((target b) -  1)) then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 )
+                                                                                             else scoreLine b xs (snd (snd (x))) c False (score + new_score)   -- Checks the opeings by getting the previous and the next cells
+                                                                                       else scoreLine b xs (snd (snd (x))) c False score
                                                                             False -> scoreLine b xs (snd (snd (x))) c False score
-                                       |otherwise                   = case maximum (map fst max) == (target b) of
-                                                                            True ->  if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2
-                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in scoreLine b xs (snd (snd (x))) c False (score + new_score^new_score)   -- Checks the opeings by getting the previous and the next cells
+                                       |otherwise                   = case maximum (map fst max) == (target b) of --- TODO FIX calculae distance from target
+                                                                            True -> if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2
+                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in
+                                                                                              if (new_score >= ((target b) -  1)) then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 )
+                                                                                              else scoreLine b xs (snd (snd (x))) c False (score + new_score)   -- Checks the opeings by getting the previous and the next cells
                                                                                         else scoreLine b xs (snd (snd (x))) c False score
                                                                             False -> scoreLine b xs (snd (snd (x))) c False score
 
                                 where next_x = take (target b) (x:xs)
                                       max  =  sumList next_x c
-
 
 
 
@@ -233,8 +255,9 @@ compareList a = not . null . intersect a
 result :: (Eq a) => [a] -> [a] -> Bool
 result list1 list2 = (compareList list1 list2)
 
-getScore :: Board -> Col -> [[Position]] -> Int
-getScore b c lines = foldl(\acc x -> let l = checkLine b c x in
+getScore :: Board -> Col -> [(Position, Direction)] -> Int
+getScore b c lines = foldl(\acc x -> let line = createLine b s (x:[])
+                                         l = checkLine b c line in
                                          case result (map (fst . snd) l) (map fst (pieces b)) of
                                                True -> acc + scoreLine b l Nothing c True 0
                                                False -> acc
@@ -242,13 +265,12 @@ getScore b c lines = foldl(\acc x -> let l = checkLine b c x in
                             where s = (size b)
 
 
-
-
 -- |Evalutes the board for a given player
 evaluate :: Board -> Col -> Int
 evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- Checks if won or loss
                | fst (won b) && snd (won b) == Just (other col) = (minBound :: Int)--  Checks if won or loss
-               | otherwise =  (getScore b col (Board.lines b)) - (getScore b (other col) (Board.lines b))
+               | otherwise = (getScore b col l) - (getScore b (other col) l)
+               where l = (createLines b)
 
 
 
@@ -263,30 +285,26 @@ evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- C
 
 
 
-
-
-
-
----- |Genereates the first cell and a direction for every line > target on the board
---createLines ::Board -> [(Position, Direction)]
---createLines b = zip (zip [0..s] (repeat 0)) (repeat (0,1))++ --N && S
---                zip (zip (repeat 0) [0..s]) (repeat (1,0)) ++ --W && E
---                zip (zip [l,l-1..0] (repeat 0)) (repeat (1,1)) ++ zip (zip (repeat 0) [1,2..l]) (repeat (1,1))++
---                zip (zip (repeat 0) [s,s-1..s-l]) (repeat (1,-1)) ++ zip (zip [1,2..l] (repeat s)) (repeat (1,-1))
---               where s = size b
---                     l = (s+1) - (target b)
 --
----- |Given a position and direction generate the whole line
---createLine :: Board -> Int -> [(Position, Direction)] -> [Position]
---createLine b 0 pos     = filter (\(x,y) -> (x<=s && x>=0) && (y<=s && y>=0)) $ map fst pos
---                       where s = fromIntegral (size b)
---createLine b n (p:pos) = createLine b (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
---                       where d1 = fst (snd p )
---                             d2 = snd (snd p)
---                             p1 = fst (fst p)
---                             p2 = snd (fst p)
+-- if (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) == 2
+--                                                                                         then let new_score = (length $ filter  (== Just c) (map snd max)) in scoreLine b xs (snd (snd (x))) c False (score + new_score)
+--                                                                                        -- Checks the opeings by getting the previous and the next cells
+--                                                                                         else scoreLine b xs (snd (snd (x))) c False score
 
 
+
+--
+--if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2
+--                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in
+--                                                                                              if (new_score >= ((target b) -  2)) then scoreLine b xs (snd (snd (x))) c False (score + new_score^new_score*5)
+--                                                                                              else scoreLine b xs (snd (snd (x))) c False (score + new_score^new_score)   -- Checks the opeings by getting the previous and the next cells
+--                                                                                        else scoreLine b xs (snd (snd (x))) c False score
+--
+--  let new_score = (length $ filter  (== Just c) (map snd max)) in
+--                                                                                        case (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) of
+--                                                                                          2 -> scoreLine b xs (snd (snd (x))) c False (score + new_score)
+--                                                                                          1 -> scoreLine b xs (snd (snd (x))) c False (score + new_score)
+--                                                                                          0 -> scoreLine b xs (snd (snd (x))) c False score
 
 -- |checks if player can win with exactly x in a row
 --checkWinnable :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Bool

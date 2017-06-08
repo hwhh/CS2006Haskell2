@@ -41,10 +41,11 @@ buildTree gen b c = let moves = gen b c in -- generated moves
                              -- here for opposite player
 
 -- | MiniMax algorithm
+-- | MiniMax algorithm
 minimax :: Int -> Bool-> GameTree -> Int
 minimax 0 max gt = case max of -- When depth of 0 evalute board
-                    True ->  evaluate (game_board gt)  $ other(game_turn gt)
-                    False -> evaluate (game_board gt)  (game_turn gt)
+                           True ->  (evaluate (game_board gt)  $ other(game_turn gt))
+                           False -> (evaluate (game_board gt)  (game_turn gt))
 minimax d True gt = case length (next_moves gt) == 0 of
                            True -> evaluate  (game_board gt) (other(game_turn gt))
                            False -> minimum $ map (minimax  (d - 1) False) (map snd (next_moves gt))--foldr(\child x  -> x `max` (minimax (d-1) False child)) best_vale $ map snd (next_moves gt)
@@ -68,10 +69,11 @@ minimax_ab d a b  gt | length (next_moves gt) == 0  = (maxBound :: Int)
 getBestMove :: Int -- ^ Maximum search depth
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove n gt =  maximum $ zip (map (minimax 2 True .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
+getBestMove n gt =  maximum $ let x = zip (map (minimax 2 True  .snd) (next_moves gt)) (map fst (next_moves gt)) in trace (show x) x --Zip position with score
 --getBestMove n gt = snd $ maximum $ zip (map (minimax_ab 2 alpha beta .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
                             where alpha = (minBound :: Int)+1
                                   beta  = (maxBound :: Int)-1
+
 
 
 
@@ -96,35 +98,7 @@ updateWorld t w   | turn w == h_player w || (pVp w)  =return $ w
                          pd = (board w)
 
 
------- Update the world state after some time has passed
---updateWorld :: Float --  time since last update (you can ignore this)1
---            -> World --  current world state
---            -> IO World
---updateWorld t w | turn w == h_player w || (pVp w) = return $ w
---                | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col in
---                                  case makeMove (board w) (other $ h_player w) (snd move) of
---                                       Just new_board -> case fst $ won new_board of
---                                                               True -> return $ w {board = new_board{score = updateScore b col}, turn = other col}
---                                                               False -> return $ w {board = new_board{score = updateScore b col}, turn = other col}
---                                       Nothing -> return $ w
---                where b = board w
---                      col = turn w
---                      pd = (board w)
 
-
-{- Hint: 'updateWorld' is where the AI gets called. If the world state
- indicates that it is a computer player's turn, updateWorld should use
- 'getBestMove' to find where the computer player should play, and update
- the board in the world state with that move.
-
- At first, it is reasonable for this to be a random move!
-
- If both players are human players, the simple version above will suffice,
- since it does nothing.
-
- In a complete implementation, 'updateWorld' should also check if either
- player has won and display a message if so.
--}
 
 -- |Generates the moves
 generateMoves :: Board -> Col -> [Position]
@@ -143,7 +117,7 @@ distanceFrom p1 p2 dis | (abs (fst p1 - fst p2)) <= fst dis && (abs (snd p1 - sn
 
 getCloseMoves :: Board -> [Position] -> [Position]
 getCloseMoves b all_moves = Set.toList . Set.fromList $ foldl(\acc (x1,y1) -> acc ++ foldl(\ acc2 (x2,y2) ->
-                                                    case distanceFrom (x1,y1) (x2,y2) (1,1) of
+                                                    case distanceFrom (x1,y1) (x2,y2) (2,2) of
                                                         True -> (x1,y1):acc2
                                                         False -> acc2
                                                 )[] occupied_positions
@@ -186,8 +160,36 @@ getBestMoves b c all_moves = let a = foldr(\(x,y) acc-> case makeMove b c (x,y) 
 
 
 
+------ Update the world state after some time has passed
+--updateWorld :: Float --  time since last update (you can ignore this)1
+--            -> World --  current world state
+--            -> IO World
+--updateWorld t w | turn w == h_player w || (pVp w) = return $ w
+--                | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col in
+--                                  case makeMove (board w) (other $ h_player w) (snd move) of
+--                                       Just new_board -> case fst $ won new_board of
+--                                                               True -> return $ w {board = new_board{score = updateScore b col}, turn = other col}
+--                                                               False -> return $ w {board = new_board{score = updateScore b col}, turn = other col}
+--                                       Nothing -> return $ w
+--                where b = board w
+--                      col = turn w
+--                      pd = (board w)
 
-
+--minimax :: Int -> GameTree -> Int
+--minimax depth gt
+--  | depth <= 0         = evaluate (game_board gt) $ other (game_turn gt)
+--  | depth `mod` 2 == 0 = let moves = map (minimax (depth - 1)) (map snd (next_moves gt))
+--                         in if moves == []
+--                              then evaluate  (game_board gt) (game_turn gt)
+--                              else minimum $ map (minimax (depth - 1)) (map snd (next_moves gt))
+--  | depth `mod` 2 == 1 = let moves = map (minimax (depth - 1)) (map snd (next_moves gt))
+--                         in if moves == []
+--                              then evaluate  (game_board gt) (game_turn gt)
+--                              else maximum $ map (minimax (depth - 1)) (map snd (next_moves gt))
+--
+--getBestMove :: Int -> GameTree -> Position
+--getBestMove depth tree = snd $ maximum $ let x = zip (map ((minimax (1)).snd) (next_moves tree)) (map fst (next_moves tree)) in trace (show x) x
+--
 
 
 
