@@ -15,24 +15,15 @@ import Debug.Trace
 fieldSize@(width, height) = (720, 720) :: (Float, Float)
 
 
--- Update the world state given an input event. Some sample input events
--- are given; when they happen, there is a trace printed on the console
---
--- trace :: String -> a -> a
--- 'trace' returns its second argument while printing its first argument
--- to stderr, which can be a very useful way of debugging!
-handleInput :: Event -> World -> IO World
+--if (pieces b) == []
+--then return $ w {board = new_board, turn = other col}
+--else return $ w {board = new_board{score = updateScore b col }, turn = other col}
 
+handleInput :: Event -> World -> IO World
 handleInput (EventKey (MouseButton LeftButton) Up m (x, y)) w =  case makeMove b col (f, s) of
                                                                           Just new_board -> case fst $ won new_board of
-                                                                                 True -> if (pieces b) == []
-                                                                                            then return $ w {board = new_board, turn = other col}
-                                                                                         else
-                                                                                            return $ w {board = new_board{score = updateScore b col }, turn = other col}
-                                                                                 False ->if (pieces b) == []
-                                                                                             then return $ w {board = new_board, turn = other col}
-                                                                                          else
-                                                                                             return $ w {board = new_board{score = updateScore b col }, turn = other col}
+                                                                                 True -> return $ w {board = new_board, turn = other col}
+                                                                                 False ->return $ w {board = new_board, turn = other col}
                                                                           Nothing -> return w
 
                                                                  where b = board w

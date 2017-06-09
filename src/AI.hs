@@ -58,17 +58,36 @@ minimax_ab d a b  gt | length (next_moves gt) == 0  = (maxBound :: Int)
 getBestMove :: Int -- ^ Maximum search depth
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove n gt =  maximum $ zip (map (minimax 2 True  .snd) (next_moves gt)) (map fst (next_moves gt))  --Zip position with score
---getBestMove n gt = maximum $ zip (map (minimax_ab 2 alpha beta .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
-                            where alpha = (minBound :: Int)+1
-                                  beta  = (maxBound :: Int)-1
+--getBestMove n gt =  maximum $ zip (map (minimax 2 True  .snd) (next_moves gt)) (map fst (next_moves gt))  --Zip position with score
+getBestMove n gt = maximum $ zip (map (minimax_ab 2 alpha beta .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
+                            where alpha = (minBound :: Int)
+                                  beta  = (maxBound :: Int)
 
 
 
-updateScore :: Board -> Col -> (Int, Int)
-updateScore b c  = (evaluate b Black, evaluate b White)
+
+--updateWorld :: Float --  time since last update (you can ignore this)1
+--            -> World --  current world state
+--            -> IO World
+--updateWorld t w | turn w == h_player w || (pVp w) = return $ w
+--                | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col in
+--                                  case makeMove (board w) (other $ h_player w) (snd move) of
+--                                       Just new_board -> case fst $ won new_board of
+--                                                               True -> if (pieces b) == [] then
+--                                                                            return $ w {board = new_board, turn = other col}
+--                                                                       else
+--                                                                            return $ w {board = new_board{score = (updateScore b col)}, turn = other col}
+--                                                               False ->if (pieces b) == [] then
+--                                                                            return $ w {board = new_board, turn = other col}
+--                                                                        else
+--                                                                            return $ w {board = new_board{score = (updateScore b col)}, turn = other col}
+--                                       Nothing -> return $ w
+--                where b = board w
+--                      col = turn w
+--                      pd = (board w)
 
 
+---- Update the world state after some time has passed
 updateWorld :: Float --  time since last update (you can ignore this)1
             -> World --  current world state
             -> IO World
@@ -76,14 +95,8 @@ updateWorld t w | turn w == h_player w || (pVp w) = return $ w
                 | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col in
                                   case makeMove (board w) (other $ h_player w) (snd move) of
                                        Just new_board -> case fst $ won new_board of
-                                                               True -> if (pieces b) == [] then
-                                                                            return $ w {board = new_board, turn = other col}
-                                                                       else
-                                                                            return $ w {board = new_board{score = (updateScore b col)}, turn = other col}
-                                                               False ->if (pieces b) == [] then
-                                                                            return $ w {board = new_board, turn = other col}
-                                                                        else
-                                                                            return $ w {board = new_board{score = (updateScore b col)}, turn = other col}
+                                                               True -> return $ w {board = new_board{score = updateScore b col}, turn = other col}
+                                                               False -> return $ w {board = new_board{score = updateScore b col}, turn = other col}
                                        Nothing -> return $ w
                 where b = board w
                       col = turn w
@@ -95,20 +108,21 @@ updateWorld t w | turn w == h_player w || (pVp w) = return $ w
 generateMoves :: Board -> Col -> [Position]
 generateMoves b c |length (pieces b) == 0  = let centre = ceiling (fromIntegral s / 2) in [(centre, centre)]
                   |length winning     > 0  =  winning
-                  |length close >       0  =   close
+                  |length good        > 0  =  good
                   |otherwise               =  all
-                   where all = getAllMoves b
-                         winning = getWinningMoves b c all
-                         close = getCloseMoves b all
-                         s = size b
+                  where all = getAllMoves b
+                        winning = getWinningMoves b c all
+                        good = getBestMoves b c $ getCloseMoves b all (1,1)
+                        close  =  getCloseMoves b all (1,1)
+                        s = size b
 
 distanceFrom :: Position -> Position -> Position -> Bool
 distanceFrom p1 p2 dis | (abs (fst p1 - fst p2)) <= fst dis && (abs (snd p1 - snd p2)) <= snd dis = True
                        | otherwise = False
 
-getCloseMoves :: Board -> [Position] -> [Position]
-getCloseMoves b all_moves = Set.toList . Set.fromList $ foldl(\acc (x1,y1) -> acc ++ foldl(\ acc2 (x2,y2) ->
-                                                    case distanceFrom (x1,y1) (x2,y2) (2,2) of
+getCloseMoves :: Board -> [Position] -> (Int, Int) ->[Position]
+getCloseMoves b all_moves (x,y) = Set.toList . Set.fromList $ foldl(\acc (x1,y1) -> acc ++ foldl(\ acc2 (x2,y2) ->
+                                                    case distanceFrom (x1,y1) (x2,y2) (x, y) of
                                                         True -> (x1,y1):acc2
                                                         False -> acc2
                                                 )[] occupied_positions
@@ -137,11 +151,10 @@ getWinningMoves b c all_moves = foldr(\(x,y) acc-> case makeMove b c (x,y) of
 
 -- |Gets moves with good scors
 getBestMoves :: Board -> Col -> [Position] ->[Position]
-getBestMoves b c all_moves = let a = foldr(\(x,y) acc-> case makeMove b c (x,y) of
-                                                                  Just new_board -> let score = evaluate new_board c in
-                                                                                        if score > 0 then (score, (x,y)):acc else acc
-                                                                  Nothing -> acc
-                                        ) [] all_moves in map snd $ take 5 $ reverse (L.sortBy (compare `on` fst) a)
+getBestMoves b c moves = let old_score = evaluate b c
+                             a = foldr(\(x,y) acc-> let b1 = b{pieces =  ((x,y), c):pieces b}
+                                                        in if old_score < evaluate b1 c then (x,y):acc else acc
+                                        ) [] moves in take 10 $ reverse (L.sortBy (compare `on` fst) a)
 
 
 
