@@ -79,13 +79,13 @@ data World = World { flags :: Flags,
 
 
 initBoard :: Flags -> Board
-initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
-                                      (if t then 4 else 5)
+initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 6)
+                                      (if t then 4 else 4)
                                       []
                                       (False, Nothing)
                                       (Nothing)
                                       (0,0)
-                                      (createLines (if bs then 6 else 15) (if t then 4 else 5))
+                                      (createLines (if bs then 6 else 6) (if t then 4 else 4))
 
                                       --((0,6),Black),((6,6),White),((0,5),Black),((6,5),White)
 
@@ -149,7 +149,7 @@ makeMove b c p
             | fst p  < s && snd p < s  && fst p  > -1 && snd p > -1 =  -- Checks pieces in on the board
                                             case elem p (map fst (pieces b)) of
                                                 True -> Nothing
-                                                False -> let s = updateScore b c  in
+                                                False -> let s = (0,0)  in
                                                     case checkWon (b {pieces =  ((p, c):pieces b)}) c of
                                                             True -> Just (b {pieces =  ((p, c):pieces b), won=(True, Just c), score = s ,previous_board=Just pd})
                                                             False ->Just (b {pieces =  ((p, c):pieces b), score = s, previous_board=Just pd})
@@ -199,6 +199,7 @@ checkOpening :: Col-> (Maybe Col, Maybe Col) -> Int
 checkOpening col cols |cols == (Just col, Just col) = 0
                       |Just col == fst cols || Just col == snd cols=  1
                       |otherwise =  2
+
 
 
 

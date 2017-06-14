@@ -42,49 +42,36 @@ minimax d False gt = case length (next_moves gt) == 0 of
                            True -> evaluate  (game_board gt)  (game_turn gt)
                            False -> maximum $ map (minimax (d - 1) True) (map snd (next_moves gt))-- foldr(\child x -> x `min` (minimax (d-1) True child)) best_vale $ map snd (next_moves gt)
 
--- | Minimax with alpha beta pruning
-minimax_ab :: Int -> Int -> Int ->GameTree -> Int
-minimax_ab 0 a b  gt = evaluate (game_board gt) (other (game_turn gt))-- If depth of 0 return evalution
-minimax_ab d a b  gt | length (next_moves gt) == 0  = (maxBound :: Int)
-                     | otherwise = cmx a (map snd (next_moves gt)) -- ^ Else prune the tree
-                    where cmx a []  = a
-                          cmx a (x:xs) | a'>=b     = a'
-                                      | otherwise = cmx a' xs
-                                     where a' = -(minimax_ab (d-1) (-b) (-a)  x)
+
+minimax_ab :: Int -> Int -> Int ->Bool-> GameTree -> Int
+minimax_ab d a b max gt | d == 0             = if max then
+                                                    evaluate (game_board gt)  $ other(game_turn gt)
+                                               else (evaluate (game_board gt)  (game_turn gt))
+minimax_ab d a b max gt | d > 0  &&  max     = if length (next_moves gt) == 0 then
+                                                    evaluate (game_board gt)  $ other(game_turn gt)
+                                               else minimum $ foldl (\acc moves -> (minimax_ab (d-1) a b False (snd moves)):acc) [] (next_moves gt)
+minimax_ab d a b max gt | d > 0  &&  not max = if length (next_moves gt) == 0 then
+                                                    evaluate  (game_board gt) (game_turn gt)
+                                               else (foldl f x).(takeWhile g) $ list
 
 
+                         where prune a []  = a
+                               prune a (x:xs) | a'>=b     = a'
+                                              | otherwise = prune a' xs
+                                              where a' = (minimax_ab (d-1) a b  (not max)  x)
 
---
+
+    --maximum $ foldl (\acc moves -> let v =  (minimax_ab (d-1) a b True (snd moves)
+--                                                                                       a'
+--                                                                                            ) [] (next_moves gt)
+
 getBestMove :: Int -- ^ Maximum search depth
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
---getBestMove n gt =  maximum $ zip (map (minimax 2 True  .snd) (next_moves gt)) (map fst (next_moves gt))  --Zip position with score
-getBestMove n gt = maximum $ zip (map (minimax_ab 2 alpha beta .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
+getBestMove n gt =  maximum $ zip (map (minimax_ab 2 alpha beta True .snd) (next_moves gt)) (map fst (next_moves gt))  --Zip position with score
+--getBestMove n gt = maximum $ zip (map (minimax_ab 2 alpha beta  True .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
                             where alpha = (minBound :: Int)
                                   beta  = (maxBound :: Int)
-
-
-
-
---updateWorld :: Float --  time since last update (you can ignore this)1
---            -> World --  current world state
---            -> IO World
---updateWorld t w | turn w == h_player w || (pVp w) = return $ w
---                | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col in
---                                  case makeMove (board w) (other $ h_player w) (snd move) of
---                                       Just new_board -> case fst $ won new_board of
---                                                               True -> if (pieces b) == [] then
---                                                                            return $ w {board = new_board, turn = other col}
---                                                                       else
---                                                                            return $ w {board = new_board{score = (updateScore b col)}, turn = other col}
---                                                               False ->if (pieces b) == [] then
---                                                                            return $ w {board = new_board, turn = other col}
---                                                                        else
---                                                                            return $ w {board = new_board{score = (updateScore b col)}, turn = other col}
---                                       Nothing -> return $ w
---                where b = board w
---                      col = turn w
---                      pd = (board w)
 
 
 ---- Update the world state after some time has passed
@@ -108,12 +95,11 @@ updateWorld t w | turn w == h_player w || (pVp w) = return $ w
 generateMoves :: Board -> Col -> [Position]
 generateMoves b c |length (pieces b) == 0  = let centre = ceiling (fromIntegral s / 2) in [(centre, centre)]
                   |length winning     > 0  =  winning
-                  |length good        > 0  =  good
+                  |length close       > 0  =  close
                   |otherwise               =  all
                   where all = getAllMoves b
                         winning = getWinningMoves b c all
-                        good = getBestMoves b c $ getCloseMoves b all (1,1)
-                        close  =  getCloseMoves b all (1,1)
+                        close  =  getCloseMoves b all (2,2)
                         s = size b
 
 distanceFrom :: Position -> Position -> Position -> Bool
@@ -128,6 +114,7 @@ getCloseMoves b all_moves (x,y) = Set.toList . Set.fromList $ foldl(\acc (x1,y1)
                                                 )[] occupied_positions
                     ) [] all_moves
                 where occupied_positions = filter (`elem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.. size b], y <-[0..  size b]]
+                      current_score = evaluate
 
 
 
@@ -149,17 +136,102 @@ getWinningMoves b c all_moves = foldr(\(x,y) acc-> case makeMove b c (x,y) of
 
                                        ) [] all_moves
 
+
 -- |Gets moves with good scors
 getBestMoves :: Board -> Col -> [Position] ->[Position]
-getBestMoves b c moves = let old_score = evaluate b c
-                             a = foldr(\(x,y) acc-> let b1 = b{pieces =  ((x,y), c):pieces b}
-                                                        in if old_score < evaluate b1 c then (x,y):acc else acc
-                                        ) [] moves in take 10 $ reverse (L.sortBy (compare `on` fst) a)
+getBestMoves b c moves = let scored =  foldl(\acc (x,y) -> case makeMove b c (x,y) of
+                                                  Just b -> ((evaluate b c), (x,y)):acc
+                                                  Nothing -> acc) [] moves
+                         in map snd $ reverse (L.sortBy (compare `on` fst) scored)
+
+
+--
+---- | Minimax with alpha beta pruning
+--minimax_ab :: Int -> Int -> Int-> Bool-> GameTree -> Int
+--minimax_ab 0 a b max gt = case max of -- When depth of 0 evalute board
+--                                True ->  (evaluate (game_board gt)  $ other(game_turn gt))
+--                                False -> (evaluate (game_board gt)  (game_turn gt))
+--
+--minimax_ab d a b max gt | length (next_moves gt) == 0  = case max of -- When depth of 0 evalute board
+--                                                         True ->  (evaluate (game_board gt)  $ other(game_turn gt))
+--                                                         False -> (evaluate (game_board gt)  (game_turn gt))
+--
+--                        | otherwise = cmx a (map snd (next_moves gt)) -- ^ Else prune the tree
+--                        where cmx a []  = a
+--                              cmx a (x:xs) | a'>=b     = a'
+--                                           | otherwise = cmx a' xs
+--                                            where a' = -(minimax_ab (d-1) a b  (not max)  x)
+--
+--
+--
+----
+
+--minimax_ab d a b True gt = case length (next_moves gt) == 0 of -- ^ If maximising player get best score
+--                               True ->  evaluate  (game_board gt) (other(game_turn gt)) -- ^ found winning tree
+--                               False -> minimum $ foldl (\acc moves -> (minimax_ab (d-1) a b False (snd moves)):acc) [] (next_moves gt)
+--minimax_ab d a b False gt = case length (next_moves gt) == 0 of -- ^ If minimising player get worst score
+--                               True ->  evaluate  (game_board gt) (game_turn gt)-- ^ found lossing tree
+--                               False -> maximum $ foldl (\acc moves -> (minimax_ab (d-1) a b True (snd moves)):acc) [] (next_moves gt)
+--
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--let a = foldr(\(x,y) acc-> case makeMove b c (x,y) of
+--                                                                  Just new_board -> let score = evaluate new_board c in
+--                                                                                        if score > 0 then (score, (x,y)):acc else acc
+--                                                                  Nothing -> acc
+--                                        ) [] all_moves in map snd $ take 10 $ reverse (L.sortBy (compare `on` fst) a)
+
+
+
+
+
+
+
+-- |Gets moves with good scors
+--getBestMoves :: Board -> Col -> [Position] ->[Position]
+--getBestMoves b c moves = let old_score = evaluate b c
+--                             a = foldr(\(x,y) acc-> let b1 = b{pieces =  ((x,y), c):pieces b}
+--                                                        in if old_score < evaluate b1 c then (x,y):acc else acc
+--                                        ) [] moves in take 10 $ reverse (L.sortBy (compare `on` fst) a)
+--
+
+--updateWorld :: Float --  time since last update (you can ignore this)1
+--            -> World --  current world state
+--            -> IO World
+--updateWorld t w | turn w == h_player w || (pVp w) = return $ w
+--                | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col in
+--                                  case makeMove (board w) (other $ h_player w) (snd move) of
+--                                       Just new_board -> case fst $ won new_board of
+--                                                               True -> if (pieces b) == [] then
+--                                                                            return $ w {board = new_board, turn = other col}
+--                                                                       else
+--                                                                            return $ w {board = new_board{score = (updateScore b col)}, turn = other col}
+--                                                               False ->if (pieces b) == [] then
+--                                                                            return $ w {board = new_board, turn = other col}
+--                                                                        else
+--                                                                            return $ w {board = new_board{score = (updateScore b col)}, turn = other col}
+--                                       Nothing -> return $ w
+--                where b = board w
+--                      col = turn w
+--                      pd = (board w)
 
 
 
