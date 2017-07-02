@@ -7,6 +7,12 @@ import Data.Maybe
 import Data.Function
 import qualified Data.Set as Set
 
+import Data.Functor ((<$))
+import Data.Maybe (fromMaybe)
+import Control.Monad
+
+
+
 data GameTree = GameTree { game_board :: Board,
                            game_turn :: Col,
                            next_moves :: [(Position, GameTree)] }
@@ -43,35 +49,51 @@ minimax d False gt = case length (next_moves gt) == 0 of
                            False -> maximum $ map (minimax (d - 1) True) (map snd (next_moves gt))-- foldr(\child x -> x `min` (minimax (d-1) True child)) best_vale $ map snd (next_moves gt)
 
 
-minimax_ab :: Int -> Int -> Int ->Bool-> GameTree -> Int
-minimax_ab d a b max gt | d == 0             = if max then
-                                                    evaluate (game_board gt)  $ other(game_turn gt)
-                                               else (evaluate (game_board gt)  (game_turn gt))
-minimax_ab d a b max gt | d > 0  &&  max     = if length (next_moves gt) == 0 then
-                                                    evaluate (game_board gt)  $ other(game_turn gt)
-                                               else minimum $ foldl (\acc moves -> (minimax_ab (d-1) a b False (snd moves)):acc) [] (next_moves gt)
-minimax_ab d a b max gt | d > 0  &&  not max = if length (next_moves gt) == 0 then
-                                                    evaluate  (game_board gt) (game_turn gt)
-                                               else (foldl f x).(takeWhile g) $ list
+mapmin :: (Ord a) => [[a]] -> [a]
+mapmin [] = []
+mapmin (xs:rest) = n : (omit n rest)
+  where n = minimum xs
+        omit _ [] = []
+        omit n (xs:rest) | minleq n xs = omit n rest
+                          | otherwise   = k : omit k rest
+                            where k = minimum xs
+        minleq _ [] = False
+        minleq n (y:ys) | y <= n = True
+                        | otherwise = minleq n y
 
 
-                         where prune a []  = a
-                               prune a (x:xs) | a'>=b     = a'
-                                              | otherwise = prune a' xs
-                                              where a' = (minimax_ab (d-1) a b  (not max)  x)
+mapmax :: (Ord a) => [[a]] -> [a]
+mapmax [] = []
+mapmax (xs:rest) = n : (omit' n rest)
+  where n = maximum xs
+        omit' _ [] = []
+        omit' n (xs:rest) | maxleq n xs = omit' n rest
+                          | otherwise   = k : omit' k rest
+                         where k = maximum xs
+        maxleq _ [] = False
+        maxleq n (y:ys) | y >= n = True
+                        | otherwise = maxleq n ys
 
 
-    --maximum $ foldl (\acc moves -> let v =  (minimax_ab (d-1) a b True (snd moves)
---                                                                                       a'
---                                                                                            ) [] (next_moves gt)
+abMaxList :: GameTree -> [a]
+abMaxList gt | length next == 0 = [gt]
+             | otherwise = mapmin . map abMinList $ next
+             where next = map snd (next_moves gt)
+
+abMinList :: GameTree -> [a]
+abMinList gt | length next == 0 = [gt]
+             | otherwise = mapmax . map abMaxList next
+             where next = map snd (next_moves gt)
+
+
+
 
 getBestMove :: Int -- ^ Maximum search depth
+               -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove n gt =  maximum $ zip (map (minimax_ab 2 alpha beta True .snd) (next_moves gt)) (map fst (next_moves gt))  --Zip position with score
---getBestMove n gt = maximum $ zip (map (minimax_ab 2 alpha beta  True .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
-                            where alpha = (minBound :: Int)
-                                  beta  = (maxBound :: Int)
+getBestMove n w gt =  maximum $ let x = zip (map (minimax 2 True .snd) (next_moves gt)) (map fst (next_moves gt))  in trace (show x) x --Zip position with score
+
 
 
 ---- Update the world state after some time has passed
@@ -79,7 +101,7 @@ updateWorld :: Float --  time since last update (you can ignore this)1
             -> World --  current world state
             -> IO World
 updateWorld t w | turn w == h_player w || (pVp w) = return $ w
-                | otherwise = let move = getBestMove (ai_level w) $ buildTree generateMoves b col in
+                | otherwise = let move = getBestMove (ai_level w) w $ buildTree generateMoves b col in
                                   case makeMove (board w) (other $ h_player w) (snd move) of
                                        Just new_board -> case fst $ won new_board of
                                                                True -> return $ w {board = new_board{score = updateScore b col}, turn = other col}
@@ -100,6 +122,7 @@ generateMoves b c |length (pieces b) == 0  = let centre = ceiling (fromIntegral 
                   where all = getAllMoves b
                         winning = getWinningMoves b c all
                         close  =  getCloseMoves b all (2,2)
+                       -- good = getBestMoves b c close
                         s = size b
 
 distanceFrom :: Position -> Position -> Position -> Bool
@@ -118,6 +141,7 @@ getCloseMoves b all_moves (x,y) = Set.toList . Set.fromList $ foldl(\acc (x1,y1)
 
 
 
+--(L.sortBy (compare `on` fst) scored)
 
 -- |Gets all the free moves
 getAllMoves :: Board -> [Position]
@@ -144,6 +168,170 @@ getBestMoves b c moves = let scored =  foldl(\acc (x,y) -> case makeMove b c (x,
                                                   Nothing -> acc) [] moves
                          in map snd $ reverse (L.sortBy (compare `on` fst) scored)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--
+--prod :: [Integer] -> Integer
+--prod = fromMaybe 0 . prodM
+--
+--
+--{-# LANGUAGE BangPatterns #-}
+---- The type could be generalized to any MonadPlus Integer
+--prodM :: [Integer] -> Maybe Integer
+--prodM = foldM (\ ! acc x -> (acc * x) <$ guard (acc /= 0)) 1
+
+---- | MiniMax algorithm
+--minimax_ab :: Int -> Int -> Int -> Bool -> GameTree -> Int
+--minimax_ab 0 a b max gt = case max of -- When depth of 0 evalute board
+--                               True ->  (evaluate (game_board gt)  $ other (game_turn gt))
+--                               False -> (evaluate (game_board gt) (game_turn gt))
+--minimax_ab d a b True gt = case length (next_moves gt) == 0 of
+--                               True -> evaluate  (game_board gt) (other(game_turn gt))
+--                               False -> prune a b d True (map snd (next_moves gt)) --minimum $ map (minimax  (d - 1) False) (map snd (next_moves gt))
+--minimax_ab d a b False gt = case length (next_moves gt) == 0 of
+--                               True -> evaluate  (game_board gt)  (game_turn gt)
+--                               False -> prune a b d False (map snd (next_moves gt)) --map (prune a b d False . snd) (map snd (next_moves gt))
+--
+--
+--
+--prune :: Int -> Int -> Int ->Bool -> [GameTree] -> Int
+--prune a b d max []  = if max then a else b
+--prune a b d max (x:xs) | a'>= b && max = b'
+--                       | a >=b' && not max = a'
+--                       | otherwise = prune a' b' d (not max) xs
+--                        where a' = minimax_ab (d-1) a b False x
+--                              b' = minimax_ab (d-1) a b True x
+
+
+----
+--minimax_ab :: Int -> Int -> Int ->GameTree -> Int
+--minimax_ab 0 a b  gt = evaluate (game_board gt) (game_turn gt) -- If depth of 0 return evalution
+--minimax_ab d a b  gt | length (next_moves gt) == 0  = (maxBound :: Int)
+--                     | otherwise = cmx a (map snd (next_moves gt)) -- ^ Else prune the tree
+--                    where cmx a []  = a
+--                          cmx a (x:xs) | a'>=b     = a'
+--                                       | otherwise = cmx a' xs
+--
+
+
+
+--getBestMove n gt = maximum $ zip (map (minimax_ab 2 alpha beta  True .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
+--                            where alpha = minBound
+--                                  beta  = maxBound
+
+--minimax_abs :: Int -> Int -> Int ->GameTree -> Int
+--minimax_abs 0 a b  gt = evaluate (game_board gt) (other (game_turn gt))-- If depth of 0 return evalution
+--minimax_abs d a b  gt | length (next_moves gt) == 0  = (maxBound :: Int)
+--                      | otherwise = cmx a (map snd (next_moves gt)) -- ^ Else prune the tree
+--                      where cmx a [] = a
+--                            cmx a (x:xs) | a'>=b     = a'
+--                                         | otherwise = cmx a' xs
+--                                         where a' = -(minimax_ab (d-1) (-b) (-a)  x)
+--
+--getBestMove :: Int -- ^ Maximum search depth
+--               -> GameTree -- ^ Initial game tree
+--               -> Position
+--getBestMove n gt = snd $ maximum $ zip (map (minimax_abs 2 alpha beta  .snd) (next_moves gt)) (map fst (next_moves gt)) --Zip position with score
+--                            where alpha = (minBound :: Int)+1
+--                                  beta  = (maxBound :: Int)-1
+
+
+-- if max
+--   best = minBound
+     --
+
+--
+--  if(counterType == type) {
+--            double bestValue = Double.NEGATIVE_INFINITY;
+--            for(TurnNode child:getPossibleTurnsForAllPossibleDices(node.getBoard(),type)) {
+--                bestValue = Math.max(bestValue, alphabeta(child,depth-1,alpha,beta,Board.otherType(type)));
+--                alpha=Math.max(alpha,bestValue);
+--                if (beta <= alpha){
+--                    break;
+--                }
+--            }
+--            return bestValue;
+--        }
+--        else {
+--            double bestValue = Double.POSITIVE_INFINITY;
+--            for(TurnNode child:getPossibleTurnsForAllPossibleDices(node.getBoard(),type)) {
+--                bestValue = Math.min(bestValue, alphabeta(child,depth-1,alpha,beta,Board.otherType(type)));
+--                beta=Math.min(beta,bestValue);
+--                if (beta <= alpha){
+--                    break;
+--                }
+--            }
+--            return bestValue;
+--        }
+
+
+--
+--minimax_ab :: Int -> Int -> Int ->GameTree -> Int
+--minimax_ab 0 a b  gt = evaluate (game_board gt) (other (game_turn gt))-- If depth of 0 return evalution
+--minimax_ab d a b  gt | length (next_moves gt) == 0  = (maxBound :: Int)
+--                     | otherwise = cmx a (map snd (next_moves gt)) -- ^ Else prune the tree
+--                    where cmx a []  = a
+--                          cmx a (x:xs) | a'>=b     = a'
+--                                      | otherwise = cmx a' xs
+--                                     where a' = -(minimax_ab (d-1) (-b) (-a)  x)
+
+
+--
+--minimax_ab :: Int -> Int -> Int ->Bool-> GameTree -> Int
+--minimax_ab d a b max gt | d == 0             = if max then
+--                                                    evaluate (game_board gt)  $ other(game_turn gt)
+--                                               else (evaluate (game_board gt)  (game_turn gt))
+--minimax_ab d a b max gt | d > 0  &&  max     = if length (next_moves gt) == 0 then
+--                                                    evaluate (game_board gt)  $ other(game_turn gt)
+--                                               else minimum $ L.foldl' (\acc moves -> (minimax_ab (d-1) a b False (snd moves)):acc) [] (next_moves gt)
+--minimax_ab d a b max gt | d > 0  &&  not max = if length (next_moves gt) == 0 then
+--                                                    evaluate  (game_board gt) (game_turn gt)
+--                                               else maximum $ L.foldl' (\acc moves ->  (minimax_ab (d-1) a b True (snd moves)):acc) [] (next_moves gt)
+
+--                         where prune a b max []  = if max then a else b
+--                               prune a b max (x:xs) | a'>=b     = a'
+--                                                    | otherwise = if max then prune a' b (not max) xs else  prune a a' (not max) xs
+--                                                  where a' = (minimax_ab (d-1) a b  (not max)  x)
+
+-- | Minimax with alpha beta pruning
+--minimax_ab :: Int -> Int -> Int-> Bool-> GameTree -> Int
+--minimax_ab 0 a b max gt = case max of -- When depth of 0 evalute board
+--                              True ->  (evaluate (game_board gt)  $ other(game_turn gt))
+--                              False -> (evaluate (game_board gt)  (game_turn gt))
+--minimax_ab d a b max gt | length (next_moves gt) == 0 || d == 0  = case max of -- When depth of 0 evalute board
+--                                                                     True ->  (evaluate (game_board gt)  $ other(game_turn gt))
+--                                                                     False -> (evaluate (game_board gt)  (game_turn gt))
+--
+--                        | otherwise = let x = cmx a (map snd (next_moves gt)) in trace (show x) x-- ^ Else prune the tree
+--                        where cmx a []  = a
+--                              cmx a (x:xs) | a'>=b    = a'
+--                                           |otherwise = cmx a' xs
+--                                            where a' = -(minimax_ab (d-1) a b (not max)  x)
 
 --
 ---- | Minimax with alpha beta pruning

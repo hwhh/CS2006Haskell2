@@ -79,15 +79,14 @@ data World = World { flags :: Flags,
 
 
 initBoard :: Flags -> Board
-initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 6)
-                                      (if t then 4 else 4)
-                                      []
+initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
+                                      (if t then 4 else 5)
+                                      [((3,3),Black), ((3,2),Black),((4,4),White),((3,4),White)]
                                       (False, Nothing)
                                       (Nothing)
                                       (0,0)
-                                      (createLines (if bs then 6 else 6) (if t then 4 else 4))
+                                      (createLines (if bs then 6 else 15) (if t then 4 else 5))
 
-                                      --((0,6),Black),((6,6),White),((0,5),Black),((6,5),White)
 
 -- |Creates an IO World
 makeWorld :: Flags -> IO World

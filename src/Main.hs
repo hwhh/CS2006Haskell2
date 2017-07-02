@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Main where
 
 import Graphics.Gloss.Interface.IO.Game
@@ -38,7 +39,7 @@ main = do   args <- getArgs
 -- |Gets the program arguments
 getSetting :: [String] -> Flags
 getSetting args = foldl (\(Flags bs t h w p) str -> case str of
-                                                          "-b" -> (Flags True t h w p)
+                                                          "-bs" -> (Flags True t h w p)
                                                           "-t" -> (Flags bs True h w p)
                                                           "-h" -> (Flags bs t True w p ) --added
                                                           "-w" -> (Flags bs t h True p)

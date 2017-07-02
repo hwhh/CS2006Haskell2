@@ -51,7 +51,7 @@ drawPices b p = pictures(foldr (\((f, s), c) acc ->
 -- |Draws the hints on the board
 drawHints :: Board -> Col -> [Picture] -> Picture
 drawHints b c p = pictures (foldl (\acc (f, s) -> (uncurry translate (cellToScreen b f s (0,0)) (p!!3)) : acc ) [] moves)
-                   where moves = (getBestMoves b c (getAllMoves b))
+                   where moves = take 5 (getBestMoves b c (getAllMoves b))
 
 -- |Converts position to screen
 cellToScreen :: Board -> Int -> Int -> (Float, Float)->(Float, Float)
