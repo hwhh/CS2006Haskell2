@@ -81,11 +81,12 @@ data World = World { flags :: Flags,
 initBoard :: Flags -> Board
 initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
                                       (if t then 4 else 5)
-                                      [((3,3),Black), ((3,2),Black),((4,4),White),((3,4),White)]
+                                      [((3,3),Black), ((3,4),Black),((4,4),White),((3,5),White)]
                                       (False, Nothing)
                                       (Nothing)
                                       (0,0)
                                       (createLines (if bs then 6 else 15) (if t then 4 else 5))
+                                      --((3,3),Black), ((3,2),Black),((4,4),White),((3,4),White)
 
 
 -- |Creates an IO World
@@ -215,7 +216,7 @@ scoreLine b (x:xs) prev c first score  |length (x:xs) <= (target b) = case maxim
                                                                                              if new_score == 0
                                                                                                 then  scoreLine b (take (target b) xs) (snd (snd (xs!!((target b)-1)))) c False score
                                                                                              else if (new_score >= ((target b) -  1))
-                                                                                                then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 )
+                                                                                                then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 ) --in trace (show xp) xp
                                                                                              else
                                                                                                 scoreLine b xs (snd (snd (x))) c False (score + new_score)   -- Checks the opeings by getting the previous and the next cells
 
@@ -227,7 +228,7 @@ scoreLine b (x:xs) prev c first score  |length (x:xs) <= (target b) = case maxim
                                                                                               if new_score == 0
                                                                                                     then  scoreLine b (take (target b) xs) (snd (snd (xs!!((target b)-1)))) c False score
                                                                                               else if (new_score >= ((target b) -  1))
-                                                                                                    then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 )
+                                                                                                    then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 ) --in trace (show xp) xp
                                                                                               else
                                                                                                     scoreLine b xs (snd (snd (x))) c False (score + new_score)   -- Checks the opeings by getting the previous and the next cells
                                                                                         else scoreLine b xs (snd (snd (x))) c False score
@@ -257,7 +258,7 @@ result list1 list2 = (compareList list1 list2)
 --
 ----
 ---- |Evalutes the board for a given player
---evaluate :: Board -> Col -> Int
+--evalu43qate :: Board -> Col -> Int
 --evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- Checks if won or loss
 --               | fst (won b) && snd (won b) == Just (other col) = (minBound :: Int)--  Checks if won or loss
 --               | otherwise =  case col of
@@ -281,7 +282,10 @@ getScore b c lines = foldl(\acc x -> let l = checkLine b c x in
 evaluate :: Board -> Col -> Int
 evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- Checks if won or loss
                | fst (won b) && snd (won b) == Just (other col) = (minBound :: Int)--  Checks if won or loss
-               | otherwise =  (getScore b col (Board.lines b)) - (getScore b (other col) (Board.lines b))
+               | otherwise =  (getScore b col (Board.lines b))- (getScore b (other col) (Board.lines b))
+
+
+
 
 
 
