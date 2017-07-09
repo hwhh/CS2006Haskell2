@@ -48,59 +48,93 @@ minimax d False gt = case length (next_moves gt) == 0 of
                            True -> evaluate  (game_board gt)  (game_turn gt)
                            False -> maximum $ map (minimax (d - 1) True) (map snd (next_moves gt))-- foldr(\child x -> x `min` (minimax (d-1) True child)) best_vale $ map snd (next_moves gt)
 
-
+--mapMin :: Int -> GameTree -> Int
+--mapMin 0 gt = (evaluate (game_board gt)  $ other(game_turn gt))
+--mapMin d gt =  case length (next_moves gt) == 0 of
+--                    True -> evaluate  (game_board gt) (other(game_turn gt))
+--                    False -> minimum $ mapmax $ (map (mapMax  (d - 1)) (map snd (next_moves gt)))
+--
+--
+--mapMax :: Int -> GameTree -> Int
+--mapMax 0 gt = (evaluate (game_board gt) (game_turn gt))
+--mapMax d gt =  case length (next_moves gt) == 0 of
+--                    True ->  evaluate (game_board gt)  (game_turn gt)
+--                    False -> maximum $ mapmin $ map (mapMin  (d - 1)) (map snd (next_moves gt))  --in trace (show x) x
+--mapmin ::[Int] -> Int
+--mapmin [] = trace "here1" []
+--mapmin (x:xs) = n : (omit n xs)
+--  where n = minimum xs
+--        omit _ [] = trace "here2" []
+--        omit n (x:xs) | minleq n xs = omit n xs
+--                      | otherwise   = k : omit k xs
+--                         where k = minimum xs
+--        minleq _ [] = trace "here3" False
+--        minleq n (y:ys) | y <= n = True
+--                        | otherwise = minleq n ys
+--
+--
+--mapmax :: [Int] -> Int
+--mapmax [] = trace "herex1" []
+--mapmax (x:xs) = n : (omit' n xs)
+--  where n = maximum xs
+--        omit' _ [] = trace "herex2" []
+--        omit' n (x:xs) | maxleq n xs = omit' n xs
+--                       | otherwise   = k : omit' k xs
+--                           where k = maximum xs
+--        maxleq _ [] = False
+--        maxleq n (y:ys) | y >= n = True
+--                        | otherwise = maxleq n ys
+--
 mapMin :: Int -> GameTree -> Int
-mapMin 0 gt = (evaluate (game_board gt)  $ other(game_turn gt))
+mapMin 0 gt = [(evaluate (game_board gt)  $ other(game_turn gt))]
 mapMin d gt =  case length (next_moves gt) == 0 of
-                    True -> evaluate  (game_board gt) (other(game_turn gt))
-                    False -> minimum . mapmin $ (map (mapMax  (d - 1)) (map snd (next_moves gt)))
+                    True -> [evaluate  (game_board gt) (other(game_turn gt))]
+                    False -> minimum $ mapmax $ (map (mapMax  (d - 1)) (map snd (next_moves gt)))
 
 
 mapMax :: Int -> GameTree -> Int
-mapMax 0 gt = (evaluate (game_board gt) (game_turn gt))
+mapMax 0 gt = [(evaluate (game_board gt) (game_turn gt))]
 mapMax d gt =  case length (next_moves gt) == 0 of
-                    True ->  evaluate (game_board gt)  (game_turn gt)
-                    False -> maximum . mapmax $ map (mapMin  (d - 1)) (map snd (next_moves gt))  --in trace (show x) x
+                    True ->  [evaluate (game_board gt)  (game_turn gt)]
+                    False -> maximum $ mapmin $ map (mapMin  (d - 1)) (map snd (next_moves gt))  --in trace (show x) x
 
 
-mapmin ::[Int] -> [Int]
-mapmin [] = trace "here1" []
-mapmin (x:xs) = n : (omit n xs)
+mapmin :: [[Int]] -> [Int]
+mapmin [] = []
+mapmin (xs:rest) = n : (omit n rest)
   where n = minimum xs
-        omit _ [] = trace "here2" []
-        omit n (x:xs) | minleq n xs = omit n xs
-                      | otherwise   = k : omit k xs
-                         where k = minimum xs
-        minleq _ [] = trace "here3" False
+        omit _ [] = []
+        omit n (xs:rest) | minleq n xs = omit n rest
+                         | otherwise   = k : omit k rest
+                             where k = minimum xs
+        minleq _ [] = False
         minleq n (y:ys) | y <= n = True
-                        | otherwise = minleq n ys
+                | otherwise = minleq n ys
 
-
-mapmax :: [Int] -> [Int]
-mapmax [] = trace "herex1" []
-mapmax (x:xs) = n : (omit' n xs)
+mapmax :: [[Int]] -> [Int]
+mapmax [] = []
+mapmax (xs:rest) = n : (omit' n rest)
   where n = maximum xs
-        omit' _ [] = trace "herex2" []
-        omit' n (x:xs) | maxleq n xs = omit' n xs
-                       | otherwise   = k : omit' k xs
-                           where k = maximum xs
+        omit' _ [] = []
+        omit' n (xs:rest) | maxleq n xs = omit' n rest
+                          | otherwise   = k : omit' k rest
+                              where k = maximum xs
         maxleq _ [] = False
         maxleq n (y:ys) | y >= n = True
                         | otherwise = maxleq n ys
-
-
-
-
 
 getBestMove :: Int -- ^ Maximum search depth
                -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove n w gt =  -- maximum $ let x = zip (map (minimax 2 True .snd) (next_moves gt)) (map fst (next_moves gt))  in trace (show x) x --Zip position with score
-                      maximum $ let x = zip (map (mapMin 2 .snd) (next_moves gt)) (map fst (next_moves gt))  in trace (show x) x --Zip position with score
-                      --maximum $ let x = zip (map (minimax_ab 2 minBound maxBound  .snd) (next_moves gt)) (map fst (next_moves gt))  in trace (show x) x --Zip position with score
-
-
+getBestMove n w gt = maximum $ let x =  zip  ((map (mapMin 2 . snd) (next_moves gt))) (map fst (next_moves gt)) in trace (show x) x
+                     --maximum $ let x = zip (map (mapMin' 2 .snd) (next_moves gt)) (map fst (next_moves gt))  in trace (show x) x --Zip position with score
+--
+-- maximum $ let x = zip (map (minimax 2 True .snd) (next_moves gt)) (map fst (next_moves gt))  in trace (show x) x --Zip position with score
+--                      maximum $ let x = zip (map (mapMin 2 .snd) (next_moves gt)) (map fst (next_moves gt))  in trace (show x) x --Zip position with score
+--                      maximum $ let x = zip (map (minimax_ab 2 minBound maxBound  .snd) (next_moves gt)) (map fst (next_moves gt))  in trace (show x) x --Zip position with score
+--
+--
 
 ---- Update the world state after some time has passed
 updateWorld :: Float --  time since last update (you can ignore this)1
@@ -173,6 +207,49 @@ getBestMoves b c moves = let scored =  foldl(\acc (x,y) -> case makeMove b c (x,
                                                   Just b -> ((evaluate b c), (x,y)):acc
                                                   Nothing -> acc) [] moves
                          in map snd $ reverse (L.sortBy (compare `on` fst) scored)
+
+
+
+
+--mapmin ::[Int] -> [Int]
+--mapmin [] = trace "here1" []
+--mapmin (x:xs) = n : (omit n xs)
+--  where n = minimum xs
+--        omit _ [] = trace "here2" []
+--        omit n (x:xs) | minleq n xs = omit n xs
+--                      | otherwise   = k : omit k xs
+--                         where k = minimum xs
+--        minleq _ [] = trace "here3" False
+--        minleq n (y:ys) | y <= n = True
+--                        | otherwise = minleq n ys
+--
+--
+--mapmax :: [Int] -> [Int]
+--mapmax [] = trace "herex1" []
+--mapmax (x:xs) = n : (omit' n xs)
+--  where n = maximum xs
+--        omit' _ [] = trace "herex2" []
+--        omit' n (x:xs) | maxleq n xs = omit' n xs
+--                       | otherwise   = k : omit' k xs
+--                           where k = maximum xs
+--        maxleq _ [] = False
+--        maxleq n (y:ys) | y >= n = True
+--                        | otherwise = maxleq n ys
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
