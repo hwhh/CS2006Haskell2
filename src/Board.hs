@@ -282,7 +282,7 @@ getScore b c lines = foldl(\acc x -> let l = checkLine b c x in
 evaluate :: Board -> Col -> Int
 evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- Checks if won or loss
                | fst (won b) && snd (won b) == Just (other col) = (minBound :: Int)--  Checks if won or loss
-               | otherwise =  (getScore b col (Board.lines b))- (getScore b (other col) (Board.lines b))
+               | otherwise =  (getScore b col (Board.lines b)) - (getScore b (other col) (Board.lines b))
 
 
 
