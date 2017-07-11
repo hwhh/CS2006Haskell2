@@ -62,8 +62,8 @@ getBestMove :: Int -- ^ Maximum search depth
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
 getBestMove d w gt = case ((d-1) `mod` 2 == 0 ) of
-                            True ->  minimum $ let x = zip (map (minimax_ab (d-1) minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt)) in trace (show x) x
-                            False -> maximum $ let x = zip (map (minimax_ab (d-1) minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt)) in trace (show x) x
+                            True ->  minimum $ zip (map (minimax_ab (d-1) minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
+                            False -> maximum $ zip (map (minimax_ab (d-1) minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
 
 
 ---- Update the world state after some time has passed
