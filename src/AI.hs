@@ -87,12 +87,12 @@ updateWorld t w | turn w == h_player w || (pVp w) = return $ w
 generateMoves :: Board -> Col -> [Position]
 generateMoves b c |length (pieces b) == 0  = let centre = ceiling (fromIntegral s / 2) in [(centre, centre)]
                   |length winning     > 0  =  winning
-                  |length close       > 0  =  close
+                  |length close       > 0  =  good
                   |otherwise               =  all
                   where all = getAllMoves b
                         winning = getWinningMoves b c all
                         close  =  getCloseMoves b all (2,2)
-                       -- good = getBestMoves b c close
+                        good = getBestMoves b c close
                         s = size b
 
 distanceFrom :: Position -> Position -> Position -> Bool
