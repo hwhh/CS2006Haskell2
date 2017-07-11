@@ -12,7 +12,7 @@ cabal-version:       >=1.10
 executable gomoku
   main-is:             Main.hs
   Other-modules:       Board, Input, Draw, AI
-  build-depends:       base >=4.6 && <4.9, gloss, gloss-game, split, random, binary, bytestring, gloss-juicy, network, concurrency, containers
+  build-depends:       base >=4.6, gloss, gloss-game, split, random, binary, bytestring, gloss-juicy, network, concurrency, containers
   hs-source-dirs:      src
   default-language:    Haskell2010
 

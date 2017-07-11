@@ -81,7 +81,7 @@ data World = World { flags :: Flags,
 initBoard :: Flags -> Board
 initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
                                       (if t then 4 else 5)
-                                      [((3,3),Black), ((3,4),Black),((4,4),White),((3,5),White)]
+                                      []
                                       (False, Nothing)
                                       (Nothing)
                                       (0,0)
