@@ -97,7 +97,7 @@ initWorld :: Flags -> Board -> World
 initWorld (Flags bs t h w p) board = World   (Flags  bs t h w p)
                                              board
                                              Black
-                                             False
+             z                                False
                                              False
                                              (if w then White else Black)
                                              (if h then 3 else 2)
@@ -200,37 +200,27 @@ checkOpening col cols |cols == (Just col, Just col) = 0
                       |otherwise =  2
 
 
-
+scoreSegmeant ::  Board -> [(Int, Maybe Col)] -> Maybe Col -> Maybe Col  -> Col -> Int -> Int
+scoreSegmeant b max prev after col score  = if (checkOpening c (prev, after)) ==2 then
+                                                let new_score = (length $ filter  (== Just c) (map snd max)) in
+                                                     if new_score == 0 then
+                                                        score --scoreLine b (take (target b) xs) (snd (snd (xs!!((target b)-1)))) c False
+                                                    else if (new_score >= ((target b) -  1)) then
+                                                        (score + new_score^2 ) --  scoreLine b xs (snd (snd (x))) c False
+                                                    else
+                                                        (score + new_score) --scoreLine b xs (snd (snd (x))) c False  -- Checks the opeings by getting the previous and the next cells
+                                            else score --scoreLine b xs (snd (snd (x))) c False
 
 -- |checks if player can win with exactly x in a row
 scoreLine :: Board -> [(Int, (Position, Maybe Col))] -> Maybe Col -> Col -> Bool -> Int -> Int
 scoreLine b (x:xs) prev c first score  |length (x:xs) <= (target b) = case maximum (map fst max) == (target b) of  -- checks if n free slots in a row
-                                                                           True ->  if (checkOpening c (prev, Nothing)) == 2
-                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in  score + new_score -- Checks the opeings by getting the previous and the next cells
-                                                                                        else score
+                                                                           True -> scoreSegmeant b max prev Nothing c score
                                                                            False -> score
                                        |first                       =  case maximum (map fst max) == (target b) of -- Checks if n free slots in a row
-                                                                            True ->if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) ==2
-                                                                                       then let new_score = (length $ filter  (== Just c) (map snd max)) in
-                                                                                             if new_score == 0
-                                                                                                then  scoreLine b (take (target b) xs) (snd (snd (xs!!((target b)-1)))) c False score
-                                                                                             else if (new_score >= ((target b) -  1))
-                                                                                                then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 )
-                                                                                             else
-                                                                                                scoreLine b xs (snd (snd (x))) c False (score + new_score)   -- Checks the opeings by getting the previous and the next cells
-
-                                                                                       else scoreLine b xs (snd (snd (x))) c False score
+                                                                            True ->scoreLine b xs (snd (snd (x))) c False (scoreSegmeant b max Nothing (snd (snd (x:xs!!(target b)))) c score)
                                                                             False -> scoreLine b xs (snd (snd (x))) c False score
                                        |otherwise                   = case maximum (map fst max) == (target b) of
-                                                                            True -> if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) == 2
-                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in
-                                                                                              if new_score == 0
-                                                                                                    then  scoreLine b (take (target b) xs) (snd (snd (xs!!((target b)-1)))) c False score
-                                                                                              else if (new_score >= ((target b) -  1))
-                                                                                                    then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 )
-                                                                                              else
-                                                                                                    scoreLine b xs (snd (snd (x))) c False (score + new_score)   -- Checks the opeings by getting the previous and the next cells
-                                                                                        else scoreLine b xs (snd (snd (x))) c False score
+                                                                            True -> scoreLine b xs (snd (snd (x))) c False (scoreSegmeant b max prev (snd (snd (x:xs!!(target b)))) c score)
                                                                             False -> scoreLine b xs (snd (snd (x))) c False score
 
                                 where next_x = take (target b) (x:xs)
@@ -268,4 +258,36 @@ evaluate b col | fst (won b) && snd (won b) == Just col = (maxBound :: Int) -- C
 
 
 
+
+
+--if (checkOpening c (prev, Nothing)) == 2
+--                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in
+--                                                                                             if new_score == 0
+--                                                                                                then  score
+--                                                                                             else if (new_score >= ((target b) -  1))
+--                                                                                                then (score + new_score^2 )
+--                                                                                             else
+--                                                                                                score + new_score   -- Checks the opeings by getting the previous and the next cells
+--
+--                                                                                       else score
+
+--if (checkOpening c (Nothing, snd (snd ((x:xs) !! (length next_x))))) ==2
+--                                                                                       then let new_score = (length $ filter  (== Just c) (map snd max)) in
+--                                                                                             if new_score == 0
+--                                                                                                then  scoreLine b (take (target b) xs) (snd (snd (xs!!((target b)-1)))) c False score
+--                                                                                             else if (new_score >= ((target b) -  1))
+--                                                                                                then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 )
+--                                                                                             else
+--                                                                                                scoreLine b xs (snd (snd (x))) c False (score + new_score)   -- Checks the opeings by getting the previous and the next cells
+--
+--                                                                                       else scoreLine b xs (snd (snd (x))) c False score
+--if (checkOpening c (prev, snd (snd ((x:xs) !! (length next_x))))) == 2
+--                                                                                        then let new_score = (length $ filter  (== Just c) (map snd max)) in
+--                                                                                              if new_score == 0
+--                                                                                                    then  scoreLine b (take (target b) xs) (snd (snd (xs!!((target b)-1)))) c False score
+--                                                                                              else if (new_score >= ((target b) -  1))
+--                                                                                                    then scoreLine b xs (snd (snd (x))) c False (score + new_score^2 )
+--                                                                                              else
+--                                                                                                    scoreLine b xs (snd (snd (x))) c False (score + new_score)   -- Checks the opeings by getting the previous and the next cells
+--                                                                                        else scoreLine b xs (snd (snd (x))) c False score
 
