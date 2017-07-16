@@ -33,8 +33,8 @@ handleInput (EventKey (Char k) Down _ _) w
     = case k of
            'n' -> return $ w{board = initBoard(flags w) , turn=Black}
            'u' -> undo w
-           's' -> do (trace("Saving game") B.writeFile "SaveFile.dat" (encode w)); return w
-           'l' -> do file <- B.readFile "SaveFile.dat"; return $ (trace("Loading game") decode file)
+        --   's' -> do (trace("Saving game") B.writeFile "SaveFile.dat" (encode w)); return w
+        --   'l' -> do file <- B.readFile "SaveFile.dat"; return $ (trace("Loading game") decode file)
            'h' -> do trace ("hints") return $ w{hints = True}
            _ -> return w
 

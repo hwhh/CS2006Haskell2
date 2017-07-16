@@ -30,11 +30,10 @@ instance Binary World where
 
 
 instance Binary Board  where
-   put (Board s t p w _ sc l) = do  put s
+   put (Board s t p w _ l) = do     put s
                                     put t
                                     put p
                                     put w
-                                    put sc
                                     put l
 
 
@@ -44,9 +43,8 @@ instance Binary Board  where
             t       <- get
             p       <- get
             w       <- get
-            sc      <- get
             l       <- get
-            return (Board s t p w Nothing sc l)
+            return (Board s t p w Nothing l)
 
 instance Binary Flags where
    put (Flags bs t h w p) = do put bs
