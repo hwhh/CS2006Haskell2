@@ -62,9 +62,9 @@ getBestMove :: Int -- ^ Maximum search depth
                -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove d w gt = maximum $  let x = zip (map (negate . minimax_ab 2 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt)) in trace (show x) x
+getBestMove d w gt | d == 3 = maximum $ zip (map (negate . minimax_ab 2 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
                   -- | otherwise = maximum $ zip (map (minimax' 1 True. snd) (next_moves gt)) (map fst (next_moves gt))
-                  -- | otherwise =  maximum $ zip (map (minimax_ab 1 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
+                   | otherwise =  maximum $ zip (map (minimax_ab 1 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
 
 
 ---- Update the world state after some time has passed
@@ -75,8 +75,8 @@ updateWorld t w | turn w == h_player w || (pVp w) = return $ w
                 | otherwise = let move = getBestMove (ai_level w) w $ buildTree generateMoves b col in
                                   case makeMove (board w) (other $ h_player w) (snd move) of
                                        Just new_board -> case fst $ won new_board of
-                                                               True -> return $ w {board = new_board{score = updateScore b col}, turn = other col}
-                                                               False -> return $ w {board = new_board{score = updateScore b col}, turn = other col}
+                                                               True ->  return $ w {board = new_board, turn = other col}
+                                                               False -> return $ w {board = new_board, turn = other col}
                                        Nothing -> return $ w
                 where b = board w
                       col = turn w

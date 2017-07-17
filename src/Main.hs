@@ -23,7 +23,6 @@ import AI
 -- 'updateWorld' is called 10 times per second (that's the "10" parameter)
 -- and, if it is an AI's turn, should update the board with an AI generated
 -- move
-zz
 main :: IO ()
 main = do   args <- getArgs
             pictures <- getPictures
