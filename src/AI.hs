@@ -57,13 +57,15 @@ minimax_ab d a b gt = prune d a b (map snd (next_moves gt))
                  where a' = -(minimax_ab (d-1) (-b) (-a) t)
 
 
+--[(8,(1,1)),(11,(1,2)),(12,(1,3)),(11,(1,4)),(10,(1,5)),(11,(2,1)),(13,(2,2)),(19,(2,3)),(17,(2,4)),(11,(2,5)),(9,(2,6)),(12,(3,1)),(19,(3,2)),(18,(3,4)),(13,(3,5)),(11,(3,6)),(11,(4,1)),(17,(4,2)),(18,(4,3)),(11,(4,5)),(9,(4,6)),(10,(5,1)),(11,(5,2)),(13,(5,3)),(11,(5,4)),(8,(5,5)),(8,(5,6)),(9,(6,2)),(11,(6,3)),(9,(6,4)),(8,(6,5)),(6,(6,6))]
+--[(8,(1,1)),(11,(1,2)),(12,(1,3)),(11,(1,4)),(10,(1,5)),(11,(2,1)),(13,(2,2)),(19,(2,3)),(17,(2,4)),(11,(2,5)),(9,(2,6)),(12,(3,1)),(19,(3,2)),(18,(3,4)),(13,(3,5)),(11,(3,6)),(11,(4,1)),(17,(4,2)),(18,(4,3)),(11,(4,5)),(9,(4,6)),(10,(5,1)),(11,(5,2)),(13,(5,3)),(11,(5,4)),(8,(5,5)),(8,(5,6)),(9,(6,2)),(11,(6,3)),(9,(6,4)),(8,(6,5)),(6,(6,6))]
 
 getBestMove :: Int -- ^ Maximum search depth
                -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove d w gt =  maximum $ zip (map (negate . minimax_ab 2 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
-                  -- | otherwise = maximum $ zip (map (minimax' 1 True. snd) (next_moves gt)) (map fst (next_moves gt))
+getBestMove d w gt = -- maximum $ zip (map (negate . minimax_ab 2 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
+                      maximum $ let x =  zip (map (minimax' 2 True. snd) (next_moves gt)) (map fst (next_moves gt))in trace (show x) x
                   --  | otherwise =  maximum $ zip (map (minimax_ab 1 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
 
 
