@@ -62,9 +62,9 @@ getBestMove :: Int -- ^ Maximum search depth
                -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove d w gt | d == 3 = maximum $ zip (map (negate . minimax_ab 2 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
+getBestMove d w gt =  maximum $ zip (map (negate . minimax_ab 2 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
                   -- | otherwise = maximum $ zip (map (minimax' 1 True. snd) (next_moves gt)) (map fst (next_moves gt))
-                   | otherwise =  maximum $ zip (map (minimax_ab 1 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
+                  --  | otherwise =  maximum $ zip (map (minimax_ab 1 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
 
 
 ---- Update the world state after some time has passed
