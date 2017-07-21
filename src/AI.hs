@@ -6,6 +6,7 @@ import qualified Data.List as L
 import Data.Maybe
 import Data.Function
 import qualified Data.Set as Set
+import System.Exit
 
 data GameTree = GameTree { game_board :: Board,
                            game_turn :: Col,
@@ -30,21 +31,8 @@ buildTree gen b c = let moves = gen b c in -- generated moves
                              -- successful, make move and build tree from
                              -- here for opposite player
 
--- | MiniMax algorithm
-minimax' :: Int -> Bool-> GameTree -> Int
-minimax' 0 max gt = case max of -- When depth of 0 evalute board
-                           True ->  (evaluate (game_board gt)  $ other(game_turn gt))
-                           False -> (evaluate (game_board gt)  (game_turn gt))
-minimax' d True gt = case length (next_moves gt) == 0 of
-                           True -> evaluate  (game_board gt) (other(game_turn gt))
-                           False -> minimum $ map (minimax'  (d - 1) False) (map snd (next_moves gt))--foldr(\child x  -> x `max` (minimax (d-1) False child)) best_vale $ map snd (next_moves gt)
-minimax' d False gt = case length (next_moves gt) == 0 of
-                           True -> evaluate  (game_board gt)  (game_turn gt)
-                           False -> maximum $ map (minimax' (d - 1) True) (map snd (next_moves gt))-- foldr(\child x -> x `min` (minimax (d-1) True child)) best_vale $ map snd (next_moves gt)
-
-
 minimax :: Int -> GameTree -> Int
-minimax 0 gt = (evaluate (game_board gt) ((game_turn gt)))
+minimax 0 gt = (evaluate (game_board gt) (game_turn gt))
 minimax d gt = -minimum (map (minimax (d-1)) (map snd (next_moves gt)))
 
 minimax_ab :: Int -> Int -> Int  -> GameTree -> Int
@@ -56,17 +44,14 @@ minimax_ab d a b gt = prune d a b (map snd (next_moves gt))
                     | otherwise = prune d a' b ts
                  where a' = -(minimax_ab (d-1) (-b) (-a) t)
 
-
---[(8,(1,1)),(11,(1,2)),(12,(1,3)),(11,(1,4)),(10,(1,5)),(11,(2,1)),(13,(2,2)),(19,(2,3)),(17,(2,4)),(11,(2,5)),(9,(2,6)),(12,(3,1)),(19,(3,2)),(18,(3,4)),(13,(3,5)),(11,(3,6)),(11,(4,1)),(17,(4,2)),(18,(4,3)),(11,(4,5)),(9,(4,6)),(10,(5,1)),(11,(5,2)),(13,(5,3)),(11,(5,4)),(8,(5,5)),(8,(5,6)),(9,(6,2)),(11,(6,3)),(9,(6,4)),(8,(6,5)),(6,(6,6))]
---[(8,(1,1)),(11,(1,2)),(12,(1,3)),(11,(1,4)),(10,(1,5)),(11,(2,1)),(13,(2,2)),(19,(2,3)),(17,(2,4)),(11,(2,5)),(9,(2,6)),(12,(3,1)),(19,(3,2)),(18,(3,4)),(13,(3,5)),(11,(3,6)),(11,(4,1)),(17,(4,2)),(18,(4,3)),(11,(4,5)),(9,(4,6)),(10,(5,1)),(11,(5,2)),(13,(5,3)),(11,(5,4)),(8,(5,5)),(8,(5,6)),(9,(6,2)),(11,(6,3)),(9,(6,4)),(8,(6,5)),(6,(6,6))]
-
 getBestMove :: Int -- ^ Maximum search depth
                -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove d w gt = -- maximum $ zip (map (negate . minimax_ab 2 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
-                      maximum $ let x =  zip (map (minimax' 2 True. snd) (next_moves gt)) (map fst (next_moves gt))in trace (show x) x
-                  --  | otherwise =  maximum $ zip (map (minimax_ab 1 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
+getBestMove d w gt | d==3 = maximum $ zip (map (negate . minimax_ab 0 (-100000) 100000 . snd) (next_moves gt)) (map fst (next_moves gt)) -- in trace (show x) x
+                   | otherwise =  maximum $ zip (map (minimax_ab 1 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
+
+
 
 
 ---- Update the world state after some time has passed
@@ -88,7 +73,7 @@ updateWorld t w | turn w == h_player w || (pVp w) = return $ w
 
 -- |Generates the moves
 generateMoves :: Board -> Col -> [Position]
-generateMoves b c |length (pieces b) == 0  = let centre = ceiling (fromIntegral s / 2) in [(centre, centre)]
+generateMoves b c |length (pieces b) == (-1)  = let centre = ceiling (fromIntegral s / 2) in [(centre, centre)]
                   |length winning     > 0  =  winning
                   |length close       > 0  =  close
                   |otherwise               =  all
@@ -110,10 +95,6 @@ getCloseMoves b all_moves (x,y) = Set.toList . Set.fromList $ foldl(\acc (x1,y1)
                     ) [] all_moves
                 where occupied_positions = filter (`elem` (map (\((x,y), c) -> (x,y)) $ pieces b)) [(x,y) | x <-[0.. size b], y <-[0..  size b]]
                       current_score = evaluate
-
-
-
-
 
 -- |Gets all the free moves
 getAllMoves :: Board -> [Position]
