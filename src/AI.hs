@@ -36,20 +36,35 @@ minimax 0 gt = (evaluate (game_board gt) (game_turn gt))
 minimax d gt = -minimum (map (minimax (d-1)) (map snd (next_moves gt)))
 
 minimax_ab :: Int -> Int -> Int  -> GameTree -> Int
-minimax_ab 0 a b gt =  a `max`(evaluate (game_board gt) (game_turn gt)) `min` b
+minimax_ab 0 a b gt = a `max`(evaluate (game_board gt) (game_turn gt)) `min` b
 minimax_ab d a b gt = prune d a b (map snd (next_moves gt))
         where prune d a b  [] =  a
               prune d a b (t:ts)
                     | a' == b = a'
                     | otherwise = prune d a' b ts
-                 where a' = -(minimax_ab (d-1) (-b) (-a) t)
+                 where a' =  -(minimax_ab (d-1) (-b) (-a) t)
+
+-- | MiniMax algorithm
+minimax' :: Int -> Bool-> GameTree -> Int
+minimax' 0 max gt = case max of -- When depth of 0 evalute board
+                           True ->  (evaluate (game_board gt)  $ other(game_turn gt))
+                           False -> (evaluate (game_board gt)  (game_turn gt))
+minimax' d True gt = case length (next_moves gt) == 0 of
+                           True -> evaluate  (game_board gt) (other(game_turn gt))
+                           False -> minimum $ map (minimax'  (d - 1) False) (map snd (next_moves gt))--foldr(\child x  -> x `max` (minimax (d-1) False child)) best_vale $ map snd (next_moves gt)
+minimax' d False gt = case length (next_moves gt) == 0 of
+                           True -> evaluate  (game_board gt)  (game_turn gt)
+                           False -> maximum $ map (minimax' (d - 1) True) (map snd (next_moves gt))-- foldr(\child x -> x `min` (minimax (d-1) True child)) best_vale $ map snd (next_moves gt)
+
+
+
 
 getBestMove :: Int -- ^ Maximum search depth
                -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove d w gt | d==3 = maximum $ zip (map (negate . minimax_ab 2 (-100000) 100000 . snd) (next_moves gt)) (map fst (next_moves gt)) -- in trace (show x) x
-                   | otherwise =  maximum $ zip (map (minimax_ab 1 minBound maxBound . snd) (next_moves gt)) (map fst (next_moves gt))
+getBestMove d w gt | d==3 = maximum $ zip (map (negate . minimax_ab 2 (-100000) 100000 . snd) (next_moves gt)) (map fst (next_moves gt))
+                   | otherwise =  maximum $ zip (map (minimax' 1 True . snd) (next_moves gt)) (map fst (next_moves gt))
 
 
 
@@ -73,13 +88,13 @@ updateWorld t w | turn w == h_player w || (pVp w) = return $ w
 
 -- |Generates the moves
 generateMoves :: Board -> Col -> [Position]
-generateMoves b c |length (pieces b) == (-1)  = let centre = ceiling (fromIntegral s / 2) in [(centre, centre)]
+generateMoves b c |length (pieces b) == (0)  = let centre = ceiling (fromIntegral s / 2) in [(centre, centre)]
                   |length winning     > 0  =  winning
                   |length close       > 0  =  close
                   |otherwise               =  all
                   where all = getAllMoves b
                         winning = getWinningMoves b c all
-                        close  =  getCloseMoves b all (2,2)
+                        close  =  getCloseMoves b all (1,1)
                         s = size b
 
 distanceFrom :: Position -> Position -> Position -> Bool

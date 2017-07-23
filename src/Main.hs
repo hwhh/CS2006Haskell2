@@ -37,11 +37,11 @@ main = do   args <- getArgs
 -- |Gets the program arguments
 getSetting :: [String] -> Flags
 getSetting args = foldl (\(Flags bs t h w p) str -> case str of
-                                                          "-bs" -> (Flags True t h w p)
-                                                          "-t" -> (Flags bs True h w p)
-                                                          "-h" -> (Flags bs t True w p ) --added
-                                                          "-w" -> (Flags bs t h True p)
-                                                          "-p" -> (Flags bs t h w True)
+                                                          "bs" -> (Flags True t h w p)
+                                                          "t" -> (Flags bs True h w p)
+                                                          "h" -> (Flags bs t True w p ) --added
+                                                          "w" -> (Flags bs t h True p)
+                                                          "p" -> (Flags bs t h w True)
                                                           _    -> (Flags bs t h w p)) (Flags False False False False False) args
 
 -- |Loads the pictures
