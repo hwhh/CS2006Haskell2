@@ -227,13 +227,12 @@ scoreLine b (x:xs) prev c  score  |length (x:xs) == (target b)=  let new_score =
                                                                            new_score
                                       |otherwise                   =  let new_score = scorePartialLine b prev (snd ((x:xs) !! (target b))) c max score in
                                                                         if new_score == (-1)
-                                                                             then scoreLine b xs (snd (x)) c score
+                                                                             then scoreLine b (dropWhile(\ac -> (snd ac) == Nothing) (xs)) Nothing c score
                                                                         else
                                                                             scoreLine b xs (snd (x)) c new_score
 
                                       where next_x = take (target b) (x:xs)
-                                            lm  =  sumList next_x c
-                                            max =  lm --trace (show (zip (map fst next_x) lm) ++ " "++show c)
+                                            max  =  sumList next_x c
 
 
 
