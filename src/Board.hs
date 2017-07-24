@@ -68,7 +68,7 @@ data World = World { flags :: Flags,
 initBoard :: Flags -> Board
 initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
                                       (if t then 4 else 5)
-                                      []
+                                      [((3,3),Black),((4,3),Black),((5,3),Black), ((6,3),White),((2,2),White),((2,3),White),((2,4),Black), ((4,2),White)]
                                       (False, Nothing)
                                       (Nothing)
                                       (createLines (if bs then 6 else 15) (if t then 4 else 5))
@@ -143,10 +143,6 @@ createLine s n (p:pos) = createLine s (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
                              p1 = fst (fst p)
                              p2 = snd (fst p)
 
-updateScore :: Board -> Col -> (Int, Int)
-updateScore b c  = (evaluate b Black, evaluate b White)
-
-
 -- |Makes a move on the board
 makeMove :: Board -> Col -> Position -> Maybe Board
 makeMove b c p
@@ -161,7 +157,6 @@ makeMove b c p
             | otherwise = Nothing
 
             where s = (fromIntegral $ size b)+1
-                  score = evaluate b c
                   pd = b
 
 checkWon :: Board -> Col -> [[Position]] -> Bool
@@ -202,34 +197,35 @@ checkOpening col cols |(fst cols /= Just col) && (snd cols /= Just col) = 2
                       |Just col == fst cols || Just col == snd cols=  1
 
 
+--
 
 
-scorePartialLine :: Board  -> Maybe Col -> Maybe Col -> Col -> [(Int, Maybe Col)] -> Int -> Int
-scorePartialLine b prev next c max  score =case maximum (map fst max) == (target b) of -- Checks if n free slots in a row
-                                                True -> if (checkOpening c (prev, next)) == 2
-                                                       then let new_score = (length $ filter (== Just c) (map snd max))*2 `div` (length $ filter (== Nothing) (map snd max)) in
-                                                             if new_score == 0
-                                                                then (-1)
-                                                             else if (new_score >= ((target b) -  1))
-                                                                then score+new_score^2 --in trace (show xp) xp
-                                                             else
-                                                                score+new_score   -- Checks the opeings by getting the previous and the next cells
-                                                       else score
-                                                False -> score
+scorePartialLine :: Int -> Board  -> Maybe Col -> Maybe Col -> Col -> [(Int, Maybe Col)] -> Int -> Int
+scorePartialLine level b prev next c max  score =case maximum (map fst max) == (target b) of -- Checks if n free slots in a row
+                                                    True -> if (checkOpening c (prev, next)) == 2
+                                                           then let new_score = (length $ filter (== Just c) (map snd max)) in
+                                                                 if new_score == 0
+                                                                    then (-1)
+                                                                 else if (new_score == (target b) )
+                                                                    then  (score+new_score^2) `div` level+1
+                                                                 else
+                                                                    (score+new_score) `div` level+1  -- Checks the opeings by getting the previous and the next cells
+                                                           else score
+                                                    False -> score
 --Add score for blocking ?
 -- |checks if player can win with exactly x in a row
-scoreLine :: Board -> [(Position, Maybe Col)] -> Maybe Col -> Col -> Int -> Int
-scoreLine _ [] _ _  score = score
-scoreLine b (x:xs) prev c  score  |length (x:xs) == (target b)=  let new_score = scorePartialLine b prev Nothing c max score in
+scoreLine :: Int -> Board -> [(Position, Maybe Col)] -> Maybe Col -> Col -> Int -> Int
+scoreLine level _ [] _ _  score = score
+scoreLine level b (x:xs) prev c  score  |length (x:xs) == (target b)=  let new_score = scorePartialLine level b prev Nothing c max score in
                                                                         if new_score == (-1)
-                                                                            then score
+                                                                            then let y = score - (level) in trace (show y) y
                                                                         else
-                                                                           new_score
-                                      |otherwise                   =  let new_score = scorePartialLine b prev (snd ((x:xs) !! (target b))) c max score in
+                                                                           let y = new_score - (level) in trace (show y) y
+                                      |otherwise                   =  let new_score = scorePartialLine level b prev (snd ((x:xs) !! (target b))) c max score in
                                                                         if new_score == (-1)
-                                                                             then scoreLine b (dropWhile(\ac -> (snd ac) == Nothing) (xs)) Nothing c score
+                                                                             then scoreLine level b xs (snd (x)) c score --(dropWhile(\ac -> (snd ac) == Nothing) (xs))
                                                                         else
-                                                                            scoreLine b xs (snd (x)) c new_score
+                                                                            scoreLine level b xs (snd (x)) c new_score
 
                                       where next_x = take (target b) (x:xs)
                                             max  =  sumList next_x c
@@ -237,10 +233,10 @@ scoreLine b (x:xs) prev c  score  |length (x:xs) == (target b)=  let new_score =
 
 
 
-getScore :: Board -> Col -> [[Position]] -> Int
-getScore b c lines = foldl(\acc x -> let occupied = intersect x positions in
+getScore ::Int -> Board -> Col -> [[Position]] -> Int
+getScore level b c lines = foldl(\acc x -> let occupied = intersect x positions in
                                             case length occupied > 0 of
-                                                True ->  acc + scoreLine b (map snd (checkLine b c x)) Nothing c 0
+                                                True ->  acc + scoreLine level b (map snd (checkLine b c x)) Nothing c 0
                                                 False -> acc
                                    ) 0 lines
                             where s = (size b)
@@ -248,10 +244,10 @@ getScore b c lines = foldl(\acc x -> let occupied = intersect x positions in
 
 
 -- |Evalutes the board for a given player
-evaluate :: Board -> Col -> Int
-evaluate b col | fst (won b) && snd (won b) == Just col = 1000000 -- Checks if won or loss
-               | fst (won b) && snd (won b) == Just (other col) = (-1000000)
-               | otherwise =  (getScore b col (Board.lines b)) - (getScore b (other col) (Board.lines b))
+evaluate ::Int ->  Board -> Col -> Int
+evaluate level b col | fst (won b) && snd (won b) == Just col = 1000000 -- Checks if won or loss
+                     | fst (won b) && snd (won b) == Just (other col) = (-1000000)
+                     | otherwise =  (getScore level b col (Board.lines b)) - (getScore level b (other col) (Board.lines b))
 
 
 
