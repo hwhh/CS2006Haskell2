@@ -36,9 +36,9 @@ minimax (0,level) gt = (evaluate level (game_board gt) (game_turn gt))
 minimax (d,level) gt = -minimum (map (minimax (d-1, level+1)) (map snd (next_moves gt)))
 
 minimax_ab :: (Int,Int) -> Int -> Int  -> GameTree -> Int
-minimax_ab (0,level) a b gt = trace (show level) a `max`(evaluate level (game_board gt) (game_turn gt)) `min` b
+minimax_ab (0,level) a b gt = a `max`(evaluate level (game_board gt) (game_turn gt)) `min` b
 minimax_ab (d,level) a b gt = prune (d, level) a b (map snd (next_moves gt))
-        where prune (d, level) a b  [] =  trace (show level) a
+        where prune (d, level) a b  [] = a
               prune (d, level) a b (t:ts)
                         | a' == b = a'
                         | otherwise = prune (d, level) a' b ts

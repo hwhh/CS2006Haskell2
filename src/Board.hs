@@ -205,23 +205,23 @@ checkPartial score blocks edge target  = if score == 0 then (-1)
                                          else (score - blocks) - edge
 
 
-scorePartialLine' ::  Board  -> Maybe Col -> Maybe Col -> Col -> [(Int, Maybe Col)] -> Int -> Bool -> Int
-scorePartialLine' b prev next c max score edge | maximum (map fst max) == (target b) && (checkOpening c (prev, next)) == 2  && edge  = checkPartial new_score no_of_blocks 1 (target b)
-                                               | maximum (map fst max) == (target b) && (checkOpening c (prev, next)) == 2  && (not edge)  = checkPartial new_score no_of_blocks 0 (target b)
-                                               | otherwise = score
-                                               where new_score = (length $ filter (== Just c) (map snd max))
-                                                     no_of_blocks = checkOpening (other c) (prev, next)
+scorePartialLine ::  Board  -> Maybe Col -> Maybe Col -> Col -> [(Int, Maybe Col)] -> Int -> Bool -> Int
+scorePartialLine b prev next c max score edge | maximum (map fst max) == (target b) && (checkOpening c (prev, next)) == 2  && edge  = checkPartial new_score no_of_blocks 1 (target b)
+                                              | maximum (map fst max) == (target b) && (checkOpening c (prev, next)) == 2  && (not edge)  = checkPartial new_score no_of_blocks 0 (target b)
+                                              | otherwise = score
+                                              where new_score = (length $ filter (== Just c) (map snd max))
+                                                    no_of_blocks = checkOpening (other c) (prev, next)
 
 
 -- |checks if player can win with exactly x in a row
 scoreLine :: Int -> Board -> [(Position, Maybe Col)] -> Maybe Col -> Col -> Bool -> Int -> Int
 scoreLine level _ [] _ _  _ score = score
-scoreLine level b (x:xs) prev c edge score  |length (x:xs) == (target b) = let new_score = scorePartialLine' b prev Nothing c max score True in
+scoreLine level b (x:xs) prev c edge score  |length (x:xs) == (target b) = let new_score = scorePartialLine b prev Nothing c max score True in
                                                                                 if new_score == (-1)
                                                                                     then score - (level)
                                                                                 else
                                                                                    new_score - (level)
-                                              |otherwise                 = let new_score = scorePartialLine' b prev (snd ((x:xs) !! (target b))) c max score edge in
+                                              |otherwise                 = let new_score = scorePartialLine b prev (snd ((x:xs) !! (target b))) c max score edge in
                                                                                 if new_score == (-1)
                                                                                      then scoreLine level b xs (snd (x)) c False score --(dropWhile(\ac -> (snd ac) == Nothing) (xs))
                                                                                 else
