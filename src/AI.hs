@@ -47,14 +47,14 @@ minimax_ab (d,level) a b gt = prune (d, level) a b (map snd (next_moves gt))
 -- | MiniMax algorithm
 minimax' :: (Int,Int) ->  Bool-> GameTree -> Int
 minimax' (0,level) max gt = case max of -- When depth of 0 evalute board
-                           True -> let x =  (evaluate level (game_board gt)  $ other(game_turn gt)) in if fst (won (game_board gt)) then trace (show (pieces (game_board gt)) ++ " 1 " ++ show  (won (game_board gt))) x else x
-                           False -> let x = (evaluate level (game_board gt)  (game_turn gt)) in if fst (won (game_board gt)) then trace (show (pieces (game_board gt))++ " 2 " ++ show  (won (game_board gt))) x else x
+                           True -> (evaluate level (game_board gt)  $ other(game_turn gt))
+                           False -> (evaluate level (game_board gt)  (game_turn gt))
 minimax' (d,level) True gt = case length (next_moves gt) == 0 of
-                           True -> let x = evaluate level (game_board gt) (other(game_turn gt))in if fst (won (game_board gt)) then trace (show (pieces (game_board gt))++ " 3 " ++ show  (won (game_board gt))) x else x
-                           False -> minimum $ map (minimax'  (d-1, level+1) False) (map snd (next_moves gt))--foldr(\child x  -> x `max` (minimax (d-1) False child)) best_vale $ map snd (next_moves gt)
+                           True -> evaluate level (game_board gt) (other(game_turn gt))
+                           False -> minimum $ map (minimax'  (d-1, level+1) False) (map snd (next_moves gt))
 minimax' (d,level) False gt = case length (next_moves gt) == 0 of
-                           True -> let x = evaluate level (game_board gt)  (game_turn gt)in if fst (won (game_board gt)) then trace (show (pieces (game_board gt)) ++ " 4 " ++ show  (won (game_board gt))) x else x
-                           False -> maximum $ map (minimax' (d-1, level+1) True) (map snd (next_moves gt))-- foldr(\child x -> x `min` (minimax (d-1) True child)) best_vale $ map snd (next_moves gt)
+                           True ->  evaluate level (game_board gt)  (game_turn gt)
+                           False -> maximum $ map (minimax' (d-1, level+1) True) (map snd (next_moves gt))
 
 
 
@@ -62,7 +62,6 @@ getBestMove :: Int -- ^ Maximum search depth
                -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
---getBestMove d w gt | d==3 = maximum $ zip (map (minimax'   True . snd) (next_moves gt)) (map fst (next_moves gt))
 getBestMove d w gt | d==3 = maximum $ let x = zip (map (negate . minimax_ab (2,0) (-100000) 100000 . snd) (next_moves gt)) (map fst (next_moves gt)) in trace (show x ) x
                    | otherwise =  maximum $ zip (map (minimax' (1,0) True . snd) (next_moves gt)) (map fst (next_moves gt))
 
