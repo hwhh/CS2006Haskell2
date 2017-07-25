@@ -69,6 +69,7 @@ initBoard :: Flags -> Board
 initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
                                       (if t then 4 else 5)
                                       [((3,3),Black),((4,3),Black),((5,3),Black), ((6,3),White),((2,2),White),((2,3),White),((2,4),Black), ((4,2),White)]
+                                      --[]
                                       (False, Nothing)
                                       (Nothing)
                                       (createLines (if bs then 6 else 15) (if t then 4 else 5))
@@ -193,50 +194,50 @@ sumList posses c =  tail $ scanl (\(a1, a2) (p,col)  -> case col of
 -- |check wether there are adjacent cells
 checkOpening :: Col-> (Maybe Col, Maybe Col) -> Int
 checkOpening col cols |(fst cols /= Just col) && (snd cols /= Just col) = 2
-                      |cols == (Just col, Just col) = 0
                       |Just col == fst cols || Just col == snd cols=  1
+                      |cols == (Just col, Just col) = 0
 
 
---
+checkPartial :: Int -> Int -> Int -> Int -> Int
+checkPartial score blocks edge target  = if score == 0 then (-1)
+                                         else if (score == target) then  ((score^6) - blocks) - edge
+                                         else if (score == target-1) then  ((score^3) - blocks) - edge
+                                         else (score - blocks) - edge
 
 
-scorePartialLine :: Int -> Board  -> Maybe Col -> Maybe Col -> Col -> [(Int, Maybe Col)] -> Int -> Int
-scorePartialLine level b prev next c max  score =case maximum (map fst max) == (target b) of -- Checks if n free slots in a row
-                                                    True -> if (checkOpening c (prev, next)) == 2
-                                                           then let new_score = (length $ filter (== Just c) (map snd max)) in
-                                                                 if new_score == 0
-                                                                    then (-1)
-                                                                 else if (new_score == (target b) )
-                                                                    then  (score+new_score^2) `div` level+1
-                                                                 else
-                                                                    (score+new_score) `div` level+1  -- Checks the opeings by getting the previous and the next cells
-                                                           else score
-                                                    False -> score
+scorePartialLine' ::  Board  -> Maybe Col -> Maybe Col -> Col -> [(Int, Maybe Col)] -> Int -> Bool -> Int
+scorePartialLine' b prev next c max score edge | maximum (map fst max) == (target b) && (checkOpening c (prev, next)) == 2  && edge  = checkPartial new_score no_of_blocks 1 (target b)
+                                               | maximum (map fst max) == (target b) && (checkOpening c (prev, next)) == 2  && (not edge)  = checkPartial new_score no_of_blocks 0 (target b)
+                                               | otherwise = score
+                                               where new_score = (length $ filter (== Just c) (map snd max))
+                                                     no_of_blocks = checkOpening (other c) (prev, next)
+
+
 --Add score for blocking ?
 -- |checks if player can win with exactly x in a row
-scoreLine :: Int -> Board -> [(Position, Maybe Col)] -> Maybe Col -> Col -> Int -> Int
-scoreLine level _ [] _ _  score = score
-scoreLine level b (x:xs) prev c  score  |length (x:xs) == (target b)=  let new_score = scorePartialLine level b prev Nothing c max score in
-                                                                        if new_score == (-1)
-                                                                            then let y = score - (level) in trace (show y) y
-                                                                        else
-                                                                           let y = new_score - (level) in trace (show y) y
-                                      |otherwise                   =  let new_score = scorePartialLine level b prev (snd ((x:xs) !! (target b))) c max score in
-                                                                        if new_score == (-1)
-                                                                             then scoreLine level b xs (snd (x)) c score --(dropWhile(\ac -> (snd ac) == Nothing) (xs))
-                                                                        else
-                                                                            scoreLine level b xs (snd (x)) c new_score
+scoreLine :: Int -> Board -> [(Position, Maybe Col)] -> Maybe Col -> Col -> Bool -> Int -> Int
+scoreLine level _ [] _ _  _ score = score
+scoreLine level b (x:xs) prev c edge score  |length (x:xs) == (target b) = let new_score = scorePartialLine' b prev Nothing c max score True in
+                                                                                if new_score == (-1)
+                                                                                    then score - (level)
+                                                                                else
+                                                                                   new_score - (level)
+                                              |otherwise                 = let new_score = scorePartialLine' b prev (snd ((x:xs) !! (target b))) c max score edge in
+                                                                                if new_score == (-1)
+                                                                                     then scoreLine level b xs (snd (x)) c False score --(dropWhile(\ac -> (snd ac) == Nothing) (xs))
+                                                                                else
+                                                                                    scoreLine level b xs (snd (x)) c False new_score
 
                                       where next_x = take (target b) (x:xs)
                                             max  =  sumList next_x c
 
-
+--Have to distingwish between edge and nothing i.e. can i keep buliding in that direction - Also check if being blocked i.e the number of blocks adds to the score
 
 
 getScore ::Int -> Board -> Col -> [[Position]] -> Int
 getScore level b c lines = foldl(\acc x -> let occupied = intersect x positions in
                                             case length occupied > 0 of
-                                                True ->  acc + scoreLine level b (map snd (checkLine b c x)) Nothing c 0
+                                                True ->  acc + scoreLine level b (map snd (checkLine b c x)) Nothing c True 0
                                                 False -> acc
                                    ) 0 lines
                             where s = (size b)
@@ -251,4 +252,36 @@ evaluate level b col | fst (won b) && snd (won b) == Just col = 1000000 -- Check
 
 
 
+
+
+-- 1. blocks = 0 and edge
+-- 2. blocks = 0 and edge and (target -1)
+--
+-- 1. blocks = 1 and edge
+-- 2. blocks = 1 and edge and (target -1)
+--
+-- 3. blocks = 2 and not edge
+-- 4. blocks = 2 and not edge and (target -1)
+--
+-- 5. blocks = 1 and not edge
+-- 6. blocks = 1 and not edge and (target -1)
+--
+-- 7. blocks = 0 and not edge
+-- 8. blocks = 0 and not edge and (target -1)
+
+
+-- scorePartialLine :: Int -> Board  -> Maybe Col -> Maybe Col -> Col -> [(Int, Maybe Col)] -> Int -> Bool -> Int
+-- scorePartialLine level b prev next c max score edge =case maximum (map fst max) == (target b) of -- Checks if n free slots in a row
+--                                                         True -> if (checkOpening c (prev, next)) == 2 then
+--
+--                                                                          if new_score == 0 then (-1)
+--
+--                                                                          else if (new_score >= (target b)-1) then (score+new_score^4) -- `div` level+1
+--                                                                          else if (new_score >= (target b)-1 && edge) then  (score+new_score^3) -- `div` level+1
+--
+--
+--                                                                          else (score+new_score) `div` level+1
+--                                                                else score
+--                                                         False -> score
+--                                                      where new_score = (length $ filter (== Just c) (map snd max))
 
