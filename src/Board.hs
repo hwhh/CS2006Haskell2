@@ -200,7 +200,7 @@ checkOpening col cols |(fst cols /= Just col) && (snd cols /= Just col) = 2
 
 checkPartial :: Int -> Int -> Int -> Int -> Int
 checkPartial score blocks edge target  = if score == 0 then (-1)
-                                         else if (score == target) then  ((score^6) - blocks) - edge
+                                         else if (score == target) then  ((score^4) - blocks) - edge
                                          else if (score == target-1) then  ((score^3) - blocks) - edge
                                          else (score - blocks) - edge
 

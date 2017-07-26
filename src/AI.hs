@@ -62,7 +62,7 @@ getBestMove :: Int -- ^ Maximum search depth
                -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove d w gt | d==3 = maximum $ let x = zip (map (negate . minimax_ab (2,0) (-100000) 100000 . snd) (next_moves gt)) (map fst (next_moves gt)) in trace (show x ) x
+getBestMove d w gt | d==3 = maximum $ zip (map (negate . minimax_ab (2,0) (-100000) 100000 . snd) (next_moves gt)) (map fst (next_moves gt))
                    | otherwise =  maximum $ zip (map (minimax' (1,0) True . snd) (next_moves gt)) (map fst (next_moves gt))
 
 
