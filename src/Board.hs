@@ -223,7 +223,7 @@ scoreLine level b (x:xs) prev c edge score  |length (x:xs) == (target b) = let n
                                                                                    new_score - (level)
                                               |otherwise                 = let new_score = scorePartialLine b prev (snd ((x:xs) !! (target b))) c max score edge in
                                                                                 if new_score == (-1)
-                                                                                     then scoreLine level b xs (snd (x)) c False score --(dropWhile(\ac -> (snd ac) == Nothing) (xs))
+                                                                                     then scoreLine level b (dropWhile(\ac -> (snd ac) == Nothing) (xs)) Nothing c False score
                                                                                 else
                                                                                     scoreLine level b xs (snd (x)) c False new_score
 
@@ -246,25 +246,4 @@ evaluate ::Int ->  Board -> Col -> Int
 evaluate level b col | fst (won b) && snd (won b) == Just col = 1000000 -- Checks if won or loss
                      | fst (won b) && snd (won b) == Just (other col) = (-1000000)
                      | otherwise =  (getScore level b col (Board.lines b)) - (getScore level b (other col) (Board.lines b))
-
-
-
-
-
---Have to distingwish between edge and nothing i.e. can i keep buliding in that direction - Also check if being blocked i.e the number of blocks adds to the score
--- 1. blocks = 0 and edge
--- 2. blocks = 0 and edge and (target -1)
---
--- 1. blocks = 1 and edge
--- 2. blocks = 1 and edge and (target -1)
---
--- 3. blocks = 2 and not edge
--- 4. blocks = 2 and not edge and (target -1)
---
--- 5. blocks = 1 and not edge
--- 6. blocks = 1 and not edge and (target -1)
---
--- 7. blocks = 0 and not edge
--- 8. blocks = 0 and not edge and (target -1)
-
 
