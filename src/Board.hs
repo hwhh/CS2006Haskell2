@@ -34,7 +34,8 @@ data Board = Board { size :: Int,
                      pieces :: [(Position, Col)],
                      won :: (Bool, Maybe Col),
                      previous_board :: Maybe Board,
-                     lines :: [[(Position)]]
+                     lines :: [[(Position)]],
+                     score :: Int
                    }
   deriving Show
 
@@ -68,13 +69,12 @@ data World = World { flags :: Flags,
 initBoard :: Flags -> Board
 initBoard (Flags bs t _ _ _ ) = Board (if bs then 6 else 15)
                                       (if t then 4 else 5)
-                                      --[((3,3),Black),((4,3),Black),((5,3),Black), ((6,3),White),((2,2),White),((2,3),White),((2,4),Black), ((4,2),White)]
                                       []
                                       (False, Nothing)
                                       (Nothing)
                                       (createLines (if bs then 6 else 15) (if t then 4 else 5))
+                                      0
 
-                                      --((0,6),Black),((6,6),White),((0,5),Black),((6,5),White)
 
 -- |Creates an IO World
 makeWorld :: Flags -> IO World
@@ -144,6 +144,25 @@ createLine s n (p:pos) = createLine s (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
                              p1 = fst (fst p)
                              p2 = snd (fst p)
 
+-- -- |Makes a move on the board
+-- makeMove :: Board -> Col -> Position -> Maybe Board
+-- makeMove b c p
+--             | fst (won b) = Nothing -- Checks in game is over
+--             | fst p  < s && snd p < s  && fst p  > -1 && snd p > -1 =  -- Checks pieces in on the board
+--                                             case elem p (map fst (pieces b)) of
+--                                                 True -> Nothing
+--                                                 False -> let new_board = (b {pieces =  ((p, c):pieces b)})
+--                                                              new_score = evaluate 0 new_board c in
+--
+--                                                             case checkWon new_board c (Board.lines new_board) of
+--                                                                    -- True -> Just (new_board { won=(True, Just c) ,previous_board=Just pd})
+--                                                                     True -> Just (new_board { won=(True, Just c) ,previous_board=Just pd, score = new_score})
+--                                                                    -- False ->Just (new_board {previous_board=Just pd})
+--                                                                     False ->Just (new_board {previous_board=Just pd, score = new_score})
+--             | otherwise = Nothing
+--             where s = (fromIntegral $ size b)+1
+--                   pd = b
+
 -- |Makes a move on the board
 makeMove :: Board -> Col -> Position -> Maybe Board
 makeMove b c p
@@ -151,14 +170,18 @@ makeMove b c p
             | fst p  < s && snd p < s  && fst p  > -1 && snd p > -1 =  -- Checks pieces in on the board
                                             case elem p (map fst (pieces b)) of
                                                 True -> Nothing
-                                                False -> let new_board = (b {pieces =  ((p, c):pieces b)})  in
-                                                    case checkWon new_board c (Board.lines new_board) of
-                                                            True -> Just (new_board { won=(True, Just c) ,previous_board=Just pd})
-                                                            False ->Just (new_board {previous_board=Just pd})
+                                                False -> let new_board = (b {pieces =  ((p, c):pieces b)})
+                                                             new_score = evaluate 0 new_board c in
+
+                                                            case checkWon new_board c (Board.lines new_board) of
+                                                                   True -> Just (new_board { won=(True, Just c) ,previous_board=Just pd})
+                                                                   False ->Just (new_board {previous_board=Just pd})
             | otherwise = Nothing
 
             where s = (fromIntegral $ size b)+1
                   pd = b
+
+
 
 checkWon :: Board -> Col -> [[Position]] -> Bool
 checkWon b c [] = False
@@ -190,56 +213,86 @@ sumList posses c =  tail $ scanl (\(a1, a2) (p,col)  -> case col of
                                                 Nothing -> (a1+1, Nothing)
                       ) (0, Nothing) posses
 
-
 -- |check wether there are adjacent cells
 checkOpening :: Col-> (Maybe Col, Maybe Col) -> Int
-checkOpening col cols |(fst cols /= Just col) && (snd cols /= Just col) = 2
+checkOpening col cols |cols == (Just col, Just col) = 0
                       |Just col == fst cols || Just col == snd cols=  1
-                      |cols == (Just col, Just col) = 0
+                      |otherwise =  2
 
 
 checkPartial :: Int -> Int -> Int -> Int -> Int
 checkPartial score blocks edge target  = if score == 0 then (-1)
-                                         else if (score == target) then  ((score^4) - blocks) - edge
-                                         else if (score == target-1) then  ((score^3) - blocks) - edge
-                                         else (score - blocks) - edge
+                                         else if (score == target) then (score^4)
+                                         else if (score == target-1) then  (score^3)
+                                         else  (score^2)
 
 
-scorePartialLine ::  Board  -> Maybe Col -> Maybe Col -> Col -> [(Int, Maybe Col)] -> Int -> Bool -> Int
-scorePartialLine b prev next c max score edge | maximum (map fst max) == (target b) && (checkOpening c (prev, next)) == 2  && edge  = checkPartial new_score no_of_blocks 1 (target b)
-                                              | maximum (map fst max) == (target b) && (checkOpening c (prev, next)) == 2  && (not edge)  = checkPartial new_score no_of_blocks 0 (target b)
-                                              | otherwise = score
-                                              where new_score = (length $ filter (== Just c) (map snd max))
-                                                    no_of_blocks = checkOpening (other c) (prev, next)
+scorePartialLine ::  Board  -> Maybe Col -> Maybe Col -> Col -> [(Int, Maybe Col)] -> Int -> Int -> Position -> Int
+scorePartialLine b prev next c max score edges p | maximum (map fst max) == (target b) && (checkOpening c (prev, next)) == 2 =checkPartial new_score no_of_blocks edges (target b)
+                                                 | otherwise =  score
+                                          where new_score = (length $ filter (== Just c) (map snd max))
+                                                no_of_blocks = (checkOpening (other c) (prev, next))
 
+noOfEdges :: Int -> Int -> Position -> Int
+noOfEdges s t pos   | (fst pos)+t > s && (fst pos)+t > s = 2
+                    | (fst pos)-t < 0 && (snd pos)-t < 0 = 2
+                    | (fst pos)-t < 0 && (snd pos)+t > s = 2
+                    | (fst pos)+t > s && (snd pos)-t < 0 = 2
+                    | (fst pos)-t < 0 || (snd pos)-t < 0 = 1
+                    | (fst pos)+t > s || (snd pos)+t > s = 1
+                    | otherwise = 0
 
 -- |checks if player can win with exactly x in a row
-scoreLine :: Int -> Board -> [(Position, Maybe Col)] -> Maybe Col -> Col -> Bool -> Int -> Int
-scoreLine level _ [] _ _  _ score = score
-scoreLine level b (x:xs) prev c edge score  |length (x:xs) == (target b) = let new_score = scorePartialLine b prev Nothing c max score True in
+scoreLine :: Int -> Board -> [(Position, Maybe Col)] -> Maybe Col -> Col -> Int -> Int
+scoreLine level _ [] _ _ score = score
+scoreLine level b (x:xs) prev c score  |length (x:xs) == (target b) = let new_score = scorePartialLine b prev Nothing c max score (noOfEdges (size b) ((target b)-1) (fst x)) (fst x) in
                                                                                 if new_score == (-1)
                                                                                     then score - (level)
                                                                                 else
                                                                                    new_score - (level)
-                                              |otherwise                 = let new_score = scorePartialLine b prev (snd ((x:xs) !! (target b))) c max score edge in
+                                              |otherwise                 = let new_score = scorePartialLine b prev (snd ((x:xs) !! (target b))) c max score (noOfEdges (size b) (target b) (fst x)) (fst x)  in
                                                                                 if new_score == (-1)
-                                                                                     then scoreLine level b (dropWhile(\ac -> (snd ac) == Nothing) (xs)) Nothing c False score
+                                                                                     then scoreLine level b xs (snd x)  c score
                                                                                 else
-                                                                                    scoreLine level b xs (snd (x)) c False new_score
+                                                                                    scoreLine level b xs (snd (x)) c new_score
 
                                       where next_x = take (target b) (x:xs)
                                             max  =  sumList next_x c
 
 
+
 getScore ::Int -> Board -> Col -> [[Position]] -> Int
 getScore level b c lines = foldl(\acc x -> let occupied = intersect x positions in
                                             case length occupied > 0 of
-                                                True ->  acc + scoreLine level b (map snd (checkLine b c x)) Nothing c True 0
+                                                True ->  acc + scoreLine level b (map snd (checkLine b c x)) Nothing c 0
                                                 False -> acc
                                    ) 0 lines
                             where s = (size b)
                                   positions = map fst (pieces b)
 
+--
+getScore' ::Int -> Board -> Col -> [[Position]] -> Int
+getScore' level b c lines = -(score b) + (foldl(\acc x -> case last `elem` x of
+                                                True ->  acc + scoreLine level b (map snd (checkLine b c x)) Nothing c 0
+                                                False -> acc
+                                   ) 0 lines)
+                            where s = (size b)
+                                  positions = map fst (pieces b)
+                                  last = fst $ (pieces b)!!0
+
+{-
+The score of the board will only be effected by the last played piece, therefore only the lines that piece is in will be effected
+Therefore get the score of the board, which will be updated upon each more
+
+1. Make move
+2. Get the piece now at the head of the list
+3. Get the lines which are effected
+
+
+in a 2 sum game, the your score + opponents = 0
+Therefore only
+
+-}
 
 -- |Evalutes the board for a given player
 evaluate ::Int ->  Board -> Col -> Int
@@ -247,3 +300,11 @@ evaluate level b col | fst (won b) && snd (won b) == Just col = 1000000 -- Check
                      | fst (won b) && snd (won b) == Just (other col) = (-1000000)
                      | otherwise =  (getScore level b col (Board.lines b)) - (getScore level b (other col) (Board.lines b))
 
+
+
+-- -- |Evalutes the board for a given player
+-- evaluate ::Int ->  Board -> Col -> Int
+-- evaluate level b col | fst (won b) && snd (won b) == Just col = 1000000 -- Checks if won or loss
+--                      | fst (won b) && snd (won b) == Just (other col) = (-1000000)
+--                      | otherwise =  (getScore' level b col (Board.lines b)) -- (getScore' level b (other col) (Board.lines b))
+--

@@ -30,21 +30,19 @@ instance Binary World where
 
 
 instance Binary Board  where
-   put (Board s t p w _ l) = do     put s
+   put (Board s t p w _ l sc) = do  put s
                                     put t
                                     put p
                                     put w
                                     put l
-
-
-
-
-   get = do s       <- get
-            t       <- get
-            p       <- get
-            w       <- get
-            l       <- get
-            return (Board s t p w Nothing l)
+                                    put sc
+   get = do s         <- get
+            t         <- get
+            p         <- get
+            w         <- get
+            l         <- get
+            sc        <- get
+            return (Board s t p w Nothing l sc)
 
 instance Binary Flags where
    put (Flags bs t h w p) = do put bs
@@ -62,8 +60,8 @@ instance Binary Flags where
 
 
 instance Binary Col where
-   put Black = do put (1 :: Word8)
-   put White = do put (0 :: Word8)
+   put Black = put (1 :: Word8)
+   put White = put (0 :: Word8)
    get = do c <- getWord8
             case c of
               1 -> return Black

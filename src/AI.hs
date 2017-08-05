@@ -62,22 +62,27 @@ getBestMove :: Int -- ^ Maximum search depth
                -> World
                -> GameTree -- ^ Initial game tree
                -> (Int, Position)
-getBestMove d w gt | d==3 = maximum $ zip (map (negate . minimax_ab (2,0) (-100000) 100000 . snd) (next_moves gt)) (map fst (next_moves gt))
-                   | otherwise =  maximum $ zip (map (minimax' (1,0) True . snd) (next_moves gt)) (map fst (next_moves gt))
+getBestMove d w gt | d==3 = maximum $ let x = zip (map (negate . minimax_ab (2,0) (-100000) 100000 . snd) (next_moves gt)) (map fst (next_moves gt)) in trace (show x) x
+                   | otherwise =  maximum $ zip (map (minimax' (3,0) True . snd) (next_moves gt)) (map fst (next_moves gt))
 
 
 
 
----- Update the world state after some time has passed
+
+-- [(-3,(2,2)),(-2,(2,3)),(-3,(2,4)),(-2,(3,2)),(-2,(3,4)),(-3,(4,2)),(-2,(4,3)),(-3,(4,4))]
+-- [(-27,(2,2)),(-25,(2,3)),(-4,(2,4)),(-27,(3,1)),(-24,(3,2)),(-24,(3,4)),(-25,(4,1)),(-25,(4,4)),(-5,(5,1)),(-23,(5,2)),(-25,(5,3)),(-23,(5,4))]
+-- Update the world state after some time has passed
 updateWorld :: Float --  time since last update (you can ignore this)1
             -> World --  current world state
             -> IO World
-updateWorld t w | turn w == h_player w || (pVp w) = return $ w
+updateWorld t w | (turn w == h_player w || (pVp w)) = return $ w
                 | otherwise = let move = getBestMove (ai_level w) w $ buildTree generateMoves b col in
-                                  case makeMove (board w) (other $ h_player w) (snd move) of
+                                  case makeMove (board w) (col) (snd move) of
                                        Just new_board -> case fst $ won new_board of
-                                                               True ->  return $ w {board = new_board, turn = other col}
-                                                               False -> return $ w {board = new_board, turn = other col}
+                                                   True ->  return $ w {board = new_board, turn = other col}
+                                                   False -> return $ w {board = new_board, turn = other col}
+                                                   --True ->  return $ w {board = (new_board{score = (evaluate 0 new_board col)}), turn = other col}
+                                                   --False -> return $ w {board = (new_board{score = (evaluate 0 new_board col)}), turn = other col}
                                        Nothing -> return $ w
                 where b = board w
                       col = turn w
@@ -126,6 +131,10 @@ getWinningMoves b c all_moves = foldr(\(x,y) acc-> case makeMove b c (x,y) of
                                                         Nothing -> acc
 
                                        ) [] all_moves
+
+
+
+
 
 
 -- |Gets moves with good scors
