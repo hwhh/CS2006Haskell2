@@ -68,9 +68,6 @@ getBestMove d w gt | d==3 = maximum $ let x = zip (map (negate . minimax_ab (2,0
 
 
 
-
--- [(-3,(2,2)),(-2,(2,3)),(-3,(2,4)),(-2,(3,2)),(-2,(3,4)),(-3,(4,2)),(-2,(4,3)),(-3,(4,4))]
--- [(-27,(2,2)),(-25,(2,3)),(-4,(2,4)),(-27,(3,1)),(-24,(3,2)),(-24,(3,4)),(-25,(4,1)),(-25,(4,4)),(-5,(5,1)),(-23,(5,2)),(-25,(5,3)),(-23,(5,4))]
 -- Update the world state after some time has passed
 updateWorld :: Float --  time since last update (you can ignore this)1
             -> World --  current world state

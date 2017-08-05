@@ -144,24 +144,6 @@ createLine s n (p:pos) = createLine s (n-1) (((p1+d1, p2+d2),(d1, d2)):(p:pos))
                              p1 = fst (fst p)
                              p2 = snd (fst p)
 
--- -- |Makes a move on the board
--- makeMove :: Board -> Col -> Position -> Maybe Board
--- makeMove b c p
---             | fst (won b) = Nothing -- Checks in game is over
---             | fst p  < s && snd p < s  && fst p  > -1 && snd p > -1 =  -- Checks pieces in on the board
---                                             case elem p (map fst (pieces b)) of
---                                                 True -> Nothing
---                                                 False -> let new_board = (b {pieces =  ((p, c):pieces b)})
---                                                              new_score = evaluate 0 new_board c in
---
---                                                             case checkWon new_board c (Board.lines new_board) of
---                                                                    -- True -> Just (new_board { won=(True, Just c) ,previous_board=Just pd})
---                                                                     True -> Just (new_board { won=(True, Just c) ,previous_board=Just pd, score = new_score})
---                                                                    -- False ->Just (new_board {previous_board=Just pd})
---                                                                     False ->Just (new_board {previous_board=Just pd, score = new_score})
---             | otherwise = Nothing
---             where s = (fromIntegral $ size b)+1
---                   pd = b
 
 -- |Makes a move on the board
 makeMove :: Board -> Col -> Position -> Maybe Board
@@ -270,29 +252,6 @@ getScore level b c lines = foldl(\acc x -> let occupied = intersect x positions 
                             where s = (size b)
                                   positions = map fst (pieces b)
 
---
-getScore' ::Int -> Board -> Col -> [[Position]] -> Int
-getScore' level b c lines = -(score b) + (foldl(\acc x -> case last `elem` x of
-                                                True ->  acc + scoreLine level b (map snd (checkLine b c x)) Nothing c 0
-                                                False -> acc
-                                   ) 0 lines)
-                            where s = (size b)
-                                  positions = map fst (pieces b)
-                                  last = fst $ (pieces b)!!0
-
-{-
-The score of the board will only be effected by the last played piece, therefore only the lines that piece is in will be effected
-Therefore get the score of the board, which will be updated upon each more
-
-1. Make move
-2. Get the piece now at the head of the list
-3. Get the lines which are effected
-
-
-in a 2 sum game, the your score + opponents = 0
-Therefore only
-
--}
 
 -- |Evalutes the board for a given player
 evaluate ::Int ->  Board -> Col -> Int
@@ -302,9 +261,3 @@ evaluate level b col | fst (won b) && snd (won b) == Just col = 1000000 -- Check
 
 
 
--- -- |Evalutes the board for a given player
--- evaluate ::Int ->  Board -> Col -> Int
--- evaluate level b col | fst (won b) && snd (won b) == Just col = 1000000 -- Checks if won or loss
---                      | fst (won b) && snd (won b) == Just (other col) = (-1000000)
---                      | otherwise =  (getScore' level b col (Board.lines b)) -- (getScore' level b (other col) (Board.lines b))
---
